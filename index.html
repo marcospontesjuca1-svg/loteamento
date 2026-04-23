@@ -319,7 +319,7 @@ tr:hover td { background: var(--bg); }
 </head>
 <body>
 
-<div class="app">
+<div class="app" id="app">
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sidebar-logo">
@@ -1256,3 +1256,443 @@ document.addEventListener('DOMContentLoaded',()=>{
 </script>
 </body>
 </html>
+<!-- LOGIN E CONFIG PATCH -->
+<script>
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+const AUTH_KEY = 'ph_auth';
+const USERS_KEY = 'ph_users';
+
+function getUsers(){
+  const u = localStorage.getItem(USERS_KEY);
+  if(u) return JSON.parse(u);
+  // Usuários padrão
+  const defaults = [
+    {id:1, nome:'Administrador', email:'admin@castanha.com.br', senha: btoa('castanha2024'), perfil:'admin', ativo:true},
+    {id:2, nome:'Gerência', email:'gerencia@castanha.com.br', senha: btoa('gerencia123'), perfil:'gerente', ativo:true},
+  ];
+  localStorage.setItem(USERS_KEY, JSON.stringify(defaults));
+  return defaults;
+}
+
+function getSession(){
+  const s = sessionStorage.getItem(AUTH_KEY);
+  return s ? JSON.parse(s) : null;
+}
+
+function login(email, senha){
+  const users = getUsers();
+  const u = users.find(x => x.email.toLowerCase()===email.toLowerCase() && x.senha===btoa(senha) && x.ativo);
+  if(u){
+    sessionStorage.setItem(AUTH_KEY, JSON.stringify({id:u.id, nome:u.nome, email:u.email, perfil:u.perfil}));
+    return u;
+  }
+  return null;
+}
+
+function logout(){
+  sessionStorage.removeItem(AUTH_KEY);
+  mostrarLogin();
+}
+
+function mostrarLogin(){
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-erro').style.display='none';
+  document.getElementById('login-email').value='';
+  document.getElementById('login-senha').value='';
+}
+
+function mostrarApp(user){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('sidebar-user-nome').textContent=user.nome;
+  document.getElementById('sidebar-user-perfil').textContent=user.perfil==='admin'?'Administrador':user.perfil==='gerente'?'Gerência':'Usuário';
+  // Esconder config se não for admin
+  if(user.perfil!=='admin') document.getElementById('nav-config').style.display='none';
+}
+
+function tentarLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const btn = document.getElementById('btn-login');
+  btn.textContent='Entrando...'; btn.disabled=true;
+  setTimeout(()=>{
+    const u = login(email, senha);
+    if(u){
+      mostrarApp(u);
+      showPage('dashboard');
+    } else {
+      document.getElementById('login-erro').style.display='block';
+      btn.textContent='Entrar'; btn.disabled=false;
+    }
+  }, 500);
+}
+
+// Enter no login
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter' && document.getElementById('login-screen').style.display!=='none') tentarLogin();
+});
+</script>
+
+<!-- TELA DE LOGIN -->
+<style>
+#login-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+}
+.login-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 40px 44px;
+  width: 380px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.07);
+}
+.login-logo { text-align: center; margin-bottom: 28px; }
+.login-logo .ll-marca { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); }
+.login-logo .ll-nome { font-size: 20px; font-weight: 600; margin-top: 4px; }
+.login-logo .ll-sub { font-size: 12px; color: var(--text3); margin-top: 3px; }
+.login-field { margin-bottom: 14px; }
+.login-field label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 5px; }
+.login-field input { width: 100%; font-family: var(--font); font-size: 14px; padding: 10px 13px; border: 1px solid var(--border2); border-radius: 8px; background: var(--surface); color: var(--text); transition: border .15s; }
+.login-field input:focus { outline: none; border-color: var(--text); }
+.btn-login-full { width: 100%; padding: 11px; font-family: var(--font); font-size: 14px; font-weight: 600; background: var(--text); color: white; border: none; border-radius: 8px; cursor: pointer; transition: opacity .15s; margin-top: 4px; }
+.btn-login-full:hover { opacity: .88; }
+.btn-login-full:disabled { opacity: .5; cursor: not-allowed; }
+.login-erro { display: none; background: var(--red-bg); color: var(--red); font-size: 12px; padding: 9px 12px; border-radius: 6px; margin-bottom: 12px; text-align: center; }
+.login-hint { font-size: 11px; color: var(--text3); text-align: center; margin-top: 16px; line-height: 1.6; }
+
+/* Sidebar user */
+.sidebar-user { padding: 12px 14px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 9px; cursor: pointer; transition: background .15s; }
+.sidebar-user:hover { background: var(--bg); }
+.sidebar-user .su-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--text); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+.sidebar-user .su-nome { font-size: 12px; font-weight: 500; line-height: 1.2; }
+.sidebar-user .su-perfil { font-size: 10px; color: var(--text3); }
+
+/* Config page */
+.config-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
+.config-section-title { padding: 13px 18px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; }
+.config-section-body { padding: 16px 18px; }
+.user-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.user-row:last-child { border-bottom: none; }
+.user-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--text); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+</style>
+
+<div id="login-screen" style="display:flex">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="ll-marca">Castanha Empreendimentos</div>
+      <div class="ll-nome">Portal do Horizonte</div>
+      <div class="ll-sub">Sistema Comercial · Horizonte/CE</div>
+    </div>
+    <div class="login-erro" id="login-erro">E-mail ou senha incorretos.</div>
+    <div class="login-field">
+      <label>E-mail</label>
+      <input type="email" id="login-email" placeholder="seu@email.com.br" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-login-full" id="btn-login" onclick="tentarLogin()">Entrar</button>
+    <div class="login-hint">
+      Acesso restrito · Castanha Empreendimentos<br>
+      <span style="color:var(--text2)">admin@castanha.com.br · castanha2024</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// Injetar usuário na sidebar
+document.querySelector('.sidebar').insertAdjacentHTML('beforeend', `
+  <div class="sidebar-user" onclick="showPage('config')" title="Configurações e conta">
+    <div class="su-avatar" id="sidebar-user-avatar">A</div>
+    <div>
+      <div class="su-nome" id="sidebar-user-nome">—</div>
+      <div class="su-perfil" id="sidebar-user-perfil">—</div>
+    </div>
+  </div>
+`);
+
+// Injetar nav item config
+document.querySelector('.sidebar-nav').insertAdjacentHTML('beforeend', `
+  <div class="nav-section">Sistema</div>
+  <button class="nav-item" onclick="showPage('config')" id="nav-config">
+    <span class="ni-icon">⚙</span><span>Configurações</span>
+  </button>
+  <button class="nav-item" onclick="logout()" style="color:var(--red)">
+    <span class="ni-icon">↩</span><span>Sair</span>
+  </button>
+`);
+
+// Injetar página de configurações no main
+document.querySelector('.main').insertAdjacentHTML('beforeend', `
+<div class="page" id="page-config">
+  <div class="topbar">
+    <div class="topbar-title">Configurações</div>
+  </div>
+  <div style="padding:24px 28px">
+
+    <!-- Minha conta -->
+    <div class="config-section">
+      <div class="config-section-title">Minha conta</div>
+      <div class="config-section-body">
+        <div class="form-grid">
+          <div class="field"><label>Nome</label><input id="cfg-meu-nome" placeholder="Seu nome"></div>
+          <div class="field"><label>E-mail</label><input id="cfg-meu-email" type="email" placeholder="email@email.com" disabled style="opacity:.6"></div>
+        </div>
+        <div style="margin-top:4px;margin-bottom:16px">
+          <button class="btn btn-sm btn-primary" onclick="salvarMinhaConta()">Salvar nome</button>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:16px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:12px">Alterar senha</div>
+          <div class="form-grid g3">
+            <div class="field"><label>Senha atual</label><input type="password" id="cfg-senha-atual" placeholder="••••••••"></div>
+            <div class="field"><label>Nova senha</label><input type="password" id="cfg-senha-nova" placeholder="••••••••"></div>
+            <div class="field"><label>Confirmar nova senha</label><input type="password" id="cfg-senha-conf" placeholder="••••••••"></div>
+          </div>
+          <div id="cfg-senha-msg" style="display:none;font-size:12px;margin-bottom:10px"></div>
+          <button class="btn btn-sm btn-primary" onclick="alterarSenha()">Alterar senha</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Usuários (só admin) -->
+    <div class="config-section" id="cfg-usuarios-section">
+      <div class="config-section-title" style="display:flex;justify-content:space-between;align-items:center">
+        Usuários do sistema
+        <button class="btn btn-sm btn-primary" onclick="abrirNovoUsuario()">+ Novo usuário</button>
+      </div>
+      <div class="config-section-body" id="cfg-usuarios-lista"></div>
+    </div>
+
+    <!-- Backup -->
+    <div class="config-section">
+      <div class="config-section-title">Backup e restauração</div>
+      <div class="config-section-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px">Exportar backup</div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Salva todos os dados do sistema — lotes, propostas, contratos e usuários — em um arquivo JSON.</div>
+            <button class="btn btn-sm btn-primary" onclick="exportarBackup()">Baixar backup.json</button>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px">Restaurar backup</div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Importa um arquivo de backup gerado por este sistema. <b>Atenção:</b> substitui todos os dados atuais.</div>
+            <input type="file" id="cfg-restore-file" accept=".json" style="display:none" onchange="restaurarBackup(this)">
+            <button class="btn btn-sm" onclick="document.getElementById('cfg-restore-file').click()">Selecionar arquivo.json</button>
+          </div>
+        </div>
+        <div style="margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:var(--radius-sm);font-size:12px;color:var(--text3)" id="cfg-backup-info"></div>
+      </div>
+    </div>
+
+    <!-- Info do sistema -->
+    <div class="config-section">
+      <div class="config-section-title">Informações do sistema</div>
+      <div class="config-section-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px" id="cfg-sysinfo"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+`);
+
+// ─── CONFIGURAÇÕES ─────────────────────────────────────────────────────────────
+function renderConfig(){
+  const sess = getSession();
+  if(!sess) return;
+  document.getElementById('cfg-meu-nome').value = sess.nome;
+  document.getElementById('cfg-meu-email').value = sess.email;
+
+  // Usuários
+  const isAdmin = sess.perfil==='admin';
+  document.getElementById('cfg-usuarios-section').style.display = isAdmin?'block':'none';
+  if(isAdmin) renderUsuarios();
+
+  // Backup info
+  const lotesCount = LOTES ? LOTES.length : 0;
+  const filaCount = FILA ? FILA.length : 0;
+  const contratosCount = CONTRATOS ? CONTRATOS.length : 0;
+  const ts = new Date().toLocaleString('pt-BR');
+  document.getElementById('cfg-backup-info').innerHTML =
+    `Última verificação: ${ts} · Lotes: ${lotesCount} · Propostas na fila: ${filaCount} · Contratos: ${contratosCount}`;
+
+  // Sysinfo
+  document.getElementById('cfg-sysinfo').innerHTML = `
+    <div style="color:var(--text3)">Versão</div><div>1.0.0 · 23/04/2026</div>
+    <div style="color:var(--text3)">Empreendimento</div><div>Portal do Horizonte</div>
+    <div style="color:var(--text3)">Total de lotes</div><div>${lotesCount}</div>
+    <div style="color:var(--text3)">Empresa</div><div>Castanha Empreendimentos Imobiliários Ltda</div>
+    <div style="color:var(--text3)">CNPJ</div><div>21.613.396/0001-12</div>
+    <div style="color:var(--text3)">Armazenamento</div><div>Navegador local (localStorage)</div>
+  `;
+}
+
+function renderUsuarios(){
+  const users = getUsers();
+  const el = document.getElementById('cfg-usuarios-lista');
+  el.innerHTML = '';
+  users.forEach(u=>{
+    const ini = u.nome.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+    el.innerHTML += `
+      <div class="user-row">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="user-avatar">${ini}</div>
+          <div>
+            <div style="font-size:13px;font-weight:500">${u.nome}</div>
+            <div style="font-size:11px;color:var(--text3)">${u.email} · ${u.perfil==='admin'?'Administrador':u.perfil==='gerente'?'Gerência':'Usuário'}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="pill ${u.ativo?'pill-green':'pill-amber'}">${u.ativo?'Ativo':'Inativo'}</span>
+          <button class="btn btn-sm" onclick="editarUsuario(${u.id})">Editar</button>
+          ${u.id!==1?`<button class="btn btn-sm" style="color:var(--red)" onclick="toggleUsuario(${u.id})">${u.ativo?'Desativar':'Ativar'}</button>`:''}
+        </div>
+      </div>`;
+  });
+}
+
+function salvarMinhaConta(){
+  const sess = getSession();
+  if(!sess) return;
+  const novoNome = document.getElementById('cfg-meu-nome').value.trim();
+  if(!novoNome){ alert('Informe um nome.'); return; }
+  const users = getUsers();
+  const u = users.find(x=>x.id===sess.id);
+  if(u){ u.nome=novoNome; localStorage.setItem(USERS_KEY,JSON.stringify(users)); sess.nome=novoNome; sessionStorage.setItem(AUTH_KEY,JSON.stringify(sess)); document.getElementById('sidebar-user-nome').textContent=novoNome; }
+  mostrarMsgSenha('Nome atualizado com sucesso.','success');
+}
+
+function alterarSenha(){
+  const sess = getSession();
+  if(!sess) return;
+  const atual = document.getElementById('cfg-senha-atual').value;
+  const nova = document.getElementById('cfg-senha-nova').value;
+  const conf = document.getElementById('cfg-senha-conf').value;
+  if(!atual||!nova||!conf){ mostrarMsgSenha('Preencha todos os campos.','error'); return; }
+  if(nova!==conf){ mostrarMsgSenha('A nova senha e a confirmação não coincidem.','error'); return; }
+  if(nova.length<6){ mostrarMsgSenha('A nova senha deve ter pelo menos 6 caracteres.','error'); return; }
+  const users = getUsers();
+  const u = users.find(x=>x.id===sess.id);
+  if(!u||u.senha!==btoa(atual)){ mostrarMsgSenha('Senha atual incorreta.','error'); return; }
+  u.senha = btoa(nova);
+  localStorage.setItem(USERS_KEY,JSON.stringify(users));
+  document.getElementById('cfg-senha-atual').value='';
+  document.getElementById('cfg-senha-nova').value='';
+  document.getElementById('cfg-senha-conf').value='';
+  mostrarMsgSenha('Senha alterada com sucesso!','success');
+}
+
+function mostrarMsgSenha(msg,tipo){
+  const el=document.getElementById('cfg-senha-msg');
+  el.style.display='block';
+  el.style.color=tipo==='success'?'var(--green)':'var(--red)';
+  el.textContent=msg;
+  setTimeout(()=>el.style.display='none',3500);
+}
+
+function abrirNovoUsuario(){
+  const nome=prompt('Nome do novo usuário:'); if(!nome) return;
+  const email=prompt('E-mail:'); if(!email) return;
+  const senha=prompt('Senha inicial (mín. 6 caracteres):'); if(!senha||senha.length<6){ alert('Senha inválida.'); return; }
+  const perfil=prompt('Perfil (admin / gerente / usuario):');
+  if(!['admin','gerente','usuario'].includes(perfil)){ alert('Perfil inválido.'); return; }
+  const users=getUsers();
+  if(users.find(u=>u.email.toLowerCase()===email.toLowerCase())){ alert('E-mail já cadastrado.'); return; }
+  users.push({id:Date.now(),nome,email,senha:btoa(senha),perfil,ativo:true});
+  localStorage.setItem(USERS_KEY,JSON.stringify(users));
+  renderUsuarios();
+}
+
+function editarUsuario(id){
+  const users=getUsers();
+  const u=users.find(x=>x.id===id); if(!u) return;
+  const novoNome=prompt('Novo nome:',u.nome); if(novoNome===null) return;
+  const novaPerfil=prompt('Perfil (admin / gerente / usuario):',u.perfil);
+  if(!['admin','gerente','usuario'].includes(novaPerfil)){ alert('Perfil inválido.'); return; }
+  const novaSenha=prompt('Nova senha (deixe em branco para manter):');
+  u.nome=novoNome||u.nome;
+  u.perfil=novaPerfil;
+  if(novaSenha&&novaSenha.length>=6) u.senha=btoa(novaSenha);
+  localStorage.setItem(USERS_KEY,JSON.stringify(users));
+  renderUsuarios();
+}
+
+function toggleUsuario(id){
+  const users=getUsers();
+  const u=users.find(x=>x.id===id); if(!u) return;
+  u.ativo=!u.ativo;
+  localStorage.setItem(USERS_KEY,JSON.stringify(users));
+  renderUsuarios();
+}
+
+function exportarBackup(){
+  const payload={
+    versao:'1.0',
+    data:new Date().toISOString(),
+    empreendimento:'Portal do Horizonte',
+    lotes: JSON.parse(localStorage.getItem('ph_lotes')||'[]'),
+    fila: JSON.parse(localStorage.getItem('ph_fila')||'[]'),
+    contratos: JSON.parse(localStorage.getItem('ph_contratos')||'[]'),
+    historico: JSON.parse(localStorage.getItem('ph_historico')||'[]'),
+    usuarios: JSON.parse(localStorage.getItem(USERS_KEY)||'[]'),
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`backup_portal_horizonte_${new Date().toISOString().split('T')[0]}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+function restaurarBackup(input){
+  const file=input.files[0]; if(!file) return;
+  if(!confirm('Isso substituirá TODOS os dados atuais. Tem certeza?')){ input.value=''; return; }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.versao||!data.lotes){ alert('Arquivo de backup inválido.'); return; }
+      localStorage.setItem('ph_lotes',JSON.stringify(data.lotes));
+      localStorage.setItem('ph_fila',JSON.stringify(data.fila||[]));
+      localStorage.setItem('ph_contratos',JSON.stringify(data.contratos||[]));
+      localStorage.setItem('ph_historico',JSON.stringify(data.historico||[]));
+      if(data.usuarios) localStorage.setItem(USERS_KEY,JSON.stringify(data.usuarios));
+      // Recarregar vars globais
+      LOTES.length=0; data.lotes.forEach(l=>LOTES.push(l));
+      FILA.length=0; (data.fila||[]).forEach(f=>FILA.push(f));
+      CONTRATOS.length=0; (data.contratos||[]).forEach(c=>CONTRATOS.push(c));
+      HISTORICO.length=0; (data.historico||[]).forEach(h=>HISTORICO.push(h));
+      alert(`✓ Backup restaurado com sucesso!\n${data.lotes.length} lotes · ${(data.contratos||[]).length} contratos · Data: ${new Date(data.data).toLocaleString('pt-BR')}`);
+      renderConfig();
+    }catch(err){ alert('Erro ao ler o arquivo: '+err.message); }
+  };
+  reader.readAsText(file); input.value='';
+}
+
+// Override showPage para chamar renderConfig
+const _origShowPage = showPage;
+window.showPage = function(id){
+  _origShowPage(id);
+  if(id==='config') renderConfig();
+  // Atualizar sidebar avatar
+  const sess=getSession();
+  if(sess){
+    const ini=sess.nome.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+    document.getElementById('sidebar-user-avatar').textContent=ini;
+  }
+};
+
+// ─── VERIFICAR LOGIN NO LOAD ──────────────────────────────────────────────────
+window.addEventListener('load', ()=>{
+  const sess = getSession();
+  if(sess){
+    mostrarApp(sess);
+    showPage('dashboard');
+  } else {
+    mostrarLogin();
+  }
+});
+</script>
