@@ -536,121 +536,190 @@ function dlContrato(){genContrato(PA);}
 function dlContratoX(c){genContrato(c);}
 function genContrato(p){
   const l=p.lote,m=getMem(l.q,l.l);
-  const end=m?m.e:'Informação retirada do memorial descritivo.';
+  const end=m?(''+m.e).replace(/^A /,''):'Informação retirada do memorial descritivo.';
   const desc=m?m.d:'Descrição do lote retirada do memorial descritivo.';
   const dt=new Date(),ms=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const dte=`${dt.getDate()} de ${ms[dt.getMonth()]} de ${dt.getFullYear()}`;
+  const ent=p.entrada?BR(parseFloat(p.entrada.replace(/[^\d,]/g,'').replace(',','.'))||0):BR(l.entrada||0);
   const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Contrato ${p.num}</title>
 <style>
-@page{size:A4;margin:2cm}
+@page{size:A4;margin:2.5cm 2cm}
 *{box-sizing:border-box}
-body{font-family:'Courier New',monospace;font-size:10pt;line-height:1.65;color:#000;max-width:175mm;margin:0 auto}
-.logo{text-align:center;margin-bottom:8px}
-.logo-t{font-size:24pt;font-weight:bold;letter-spacing:3px;color:#1a5c1a}
-.logo-s{font-size:8pt;letter-spacing:1px;color:#555}
-.rodape{font-size:7.5pt;color:#555;text-align:center;border-top:1px solid #ccc;margin-bottom:6px;padding-top:3px}
-h1{font-size:10.5pt;text-align:center;text-transform:uppercase;font-weight:bold;margin:12px 0 3px}
-h2{font-size:10pt;text-align:center;text-transform:uppercase;font-weight:bold;border:1px solid #000;padding:3px 7px;margin:7px 0}
-h3{font-size:10pt;text-transform:uppercase;font-weight:bold;margin:11px 0 3px;text-decoration:underline}
-p{margin:5px 0;text-align:justify}
-.tc{width:100%;border-collapse:collapse;margin:8px 0}
-.tc td,.tc th{border:1px solid #000;padding:3px 5px;font-size:9pt}
+body{font-family:'Times New Roman',serif;font-size:10.5pt;line-height:1.7;color:#000;max-width:170mm;margin:0 auto}
+.cabecalho{text-align:center;margin-bottom:6px;padding-bottom:6px;border-bottom:2px solid #000}
+.logo-t{font-size:16pt;font-weight:bold;letter-spacing:2px}
+.rodape{font-size:7.5pt;color:#444;text-align:center;border-top:1px solid #000;padding-top:3px;margin-top:4px}
+h1{font-size:11pt;text-align:center;font-weight:bold;margin:10px 0 2px;text-transform:uppercase}
+h2{font-size:10.5pt;text-align:center;font-weight:bold;border:1px solid #000;padding:3px 7px;margin:5px 0;text-transform:uppercase}
+.cl-titulo{font-size:10.5pt;font-weight:bold;text-transform:uppercase;margin:12px 0 3px;text-decoration:underline}
+p{margin:4px 0;text-align:justify}
+.al{margin-left:20px;text-align:justify}
+.tc{width:100%;border-collapse:collapse;margin:7px 0;font-size:9.5pt}
+.tc td,.tc th{border:1px solid #000;padding:3px 5px}
 .tc th{background:#e8e8e8;text-align:center;font-weight:bold}
-.db{border:1px solid #000;padding:7px;min-height:55px;font-size:9pt;line-height:1.5;margin:5px 0;text-align:justify}
-.cl{margin:10px 0}
-.al{margin-left:18px;margin-top:3px;text-align:justify;font-size:9.5pt}
-.assgrid{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-bottom:18px}
+.db{border:1px solid #000;padding:6px;font-size:9.5pt;line-height:1.5;margin:4px 0;text-align:justify}
+.assgrid{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin:20px 0 10px}
 .assitem{text-align:center}
-.assln{border-top:1px solid #000;padding-top:3px;margin-top:28px;font-size:8.5pt}
+.assln{border-top:1px solid #000;padding-top:4px;margin-top:32px;font-size:9pt;line-height:1.6}
 .pb{page-break-before:always}
-.noprint{background:#f5f5f5;padding:10px;text-align:center;margin-bottom:16px}
+.noprint{background:#f0f0f0;padding:10px;text-align:center;margin-bottom:14px;border-radius:4px}
 @media print{.noprint{display:none}}
 </style></head><body>
-<div class="noprint">
-  <button onclick="window.print()" style="padding:8px 18px;font-size:13px;cursor:pointer;background:#1a7a50;color:white;border:none;border-radius:5px">🖨 Imprimir / Salvar como PDF</button>
-  &nbsp; <span style="font-size:11px;color:#555">Use Ctrl+P e escolha "Salvar como PDF"</span>
-</div>
-<div class="logo"><div class="logo-t">CASTANHA</div><div class="logo-s">EMPREENDIMENTOS</div></div>
+<div class="noprint"><button onclick="window.print()" style="padding:8px 20px;font-size:13px;cursor:pointer;background:#1a5c1a;color:white;border:none;border-radius:5px">Imprimir / Salvar PDF</button>&nbsp;<span style="font-size:11px;color:#555">Ctrl+P → Salvar como PDF</span></div>
+<div class="cabecalho"><div class="logo-t">CASTANHA EMPREENDIMENTOS</div></div>
 <div class="rodape">Av. Santos Dumont, nº 3131 A – Sala 217 – Aldeota – Fortaleza/CE – CEP: 60.150-165 &nbsp;|&nbsp; CNPJ/MF: 21.613.396/0001-12 &nbsp;|&nbsp; Fone/Fax: (85) 3456.5555</div>
 <h1>CONTRATO PARTICULAR DE PROMESSA DE COMPRA E VENDA<br>QUADRA ${l.q} – LOTE ${l.l}</h1>
 <h2>LOTEAMENTO PORTAL DO HORIZONTE – CIDADE DE HORIZONTE/CE</h2>
-<h3>DAS PARTES</h3>
+<p class="cl-titulo">DAS PARTES</p>
 <p><b>PROMITENTE VENDEDOR, CASTANHA EMPREENDIMENTOS IMOBILIÁRIOS LTDA,</b> empresa individual inscrita no CNPJ sob nº 21.613.396/0001-12, com sede à Av. Santos Dumont, nº 3131 A, Sala 217, Aldeota, Fortaleza/CE, CEP 60.150-165.</p>
-<p><b>PROMITENTE(S) COMPRADOR(ES),</b> doravante denominado simplesmente Comprador(es):</p>
+<p><b>PROMITENTE(S) COMPRADOR(ES),</b> doravante denominado(s) simplesmente Comprador(es):</p>
 <table class="tc">
-  <tr><th colspan="4">Comprador</th></tr>
-  <tr><td colspan="4"><b>Nome / Razão Social:</b> ${p.comprador||'____________________________'}</td></tr>
-  <tr><td><b>Nacionalidade:</b> ${p.nac||'Brasileiro(a)'}</td><td colspan="3"><b>Profissão:</b> ${p.prof||'____________________________'}</td></tr>
-  <tr><td><b>Data de nascimento:</b> ${fD(p.nasc)}</td><td colspan="3"><b>Local:</b> ${p.mun||'____________________________'}</td></tr>
-  <tr><td colspan="2"><b>CPF/CNPJ:</b> ${p.cpf||'____________________________'}</td><td colspan="2"><b>Cédula identidade/órgão:</b> ${p.rg||'____________________________'}</td></tr>
-  <tr><td colspan="2"><b>Estado civil:</b> ${p.ec||'Solteiro(a)'}</td><td colspan="2"><b>Regime e data do casamento:</b> ________________</td></tr>
-  ${p.conjugue?`<tr><th colspan="4" style="background:#f5f5f0">Cônjuge</th></tr><tr><td colspan="4"><b>Nome:</b> ${p.conjugue.nome||'____________________________'}</td></tr><tr><td colspan="2"><b>CPF:</b> ${p.conjugue.cpf||'____________________________'}</td><td colspan="2"><b>RG:</b> ${p.conjugue.rg||'____________________________'}</td></tr><tr><td colspan="2"><b>Profissão:</b> ${p.conjugue.prof||'____________________________'}</td><td colspan="2"><b>Nascimento:</b> ${fD(p.conjugue.nasc)}</td></tr>`:''}
-  <tr><td colspan="4"><b>Endereço residencial:</b> ${p.end||'____________________________'}</td></tr>
-  <tr><td><b>Bairro:</b> ${p.bairro||'________________'}</td><td><b>Município:</b> ${p.mun||'________________'}</td><td><b>UF:</b> CE</td><td><b>CEP:</b> ${p.cep||'________'}</td></tr>
-  <tr><td colspan="2"><b>Contato:</b> ${p.fone||'____________________________'}</td><td colspan="2"><b>E-mail:</b> ${p.email||'____________________________'}</td></tr>
+<tr><th colspan="4">Comprador</th></tr>
+<tr><td colspan="4"><b>Nome / Razão Social:</b> ${p.comprador||'_________________________________'}</td></tr>
+<tr><td colspan="2"><b>Nacionalidade:</b> ${p.nac||'Brasileiro(a)'}</td><td colspan="2"><b>Profissão:</b> ${p.prof||'_____________________'}</td></tr>
+<tr><td colspan="2"><b>Data de nascimento:</b> ${fD(p.nasc)}</td><td colspan="2"><b>Local:</b> ${p.mun||'_____________________'}</td></tr>
+<tr><td colspan="2"><b>CPF/CNPJ:</b> ${p.cpf||'_____________________'}</td><td colspan="2"><b>Cédula de identidade/órgão expedidor:</b> ${p.rg||'_____________________'}</td></tr>
+<tr><td colspan="2"><b>Estado civil:</b> ${p.ec||'Solteiro(a)'}</td><td colspan="2"><b>Regime e data de casamento:</b> _______________</td></tr>
+${p.conjugue&&p.conjugue.nome?`<tr><th colspan="4" style="background:#f0f0f0">Cônjuge / Companheiro(a)</th></tr>
+<tr><td colspan="4"><b>Nome:</b> ${p.conjugue.nome}</td></tr>
+<tr><td colspan="2"><b>CPF:</b> ${p.conjugue.cpf||'_____________________'}</td><td colspan="2"><b>RG:</b> ${p.conjugue.rg||'_____________________'}</td></tr>
+<tr><td colspan="2"><b>Profissão:</b> ${p.conjugue.prof||'_____________________'}</td><td colspan="2"><b>Nascimento:</b> ${fD(p.conjugue.nasc)}</td></tr>
+<tr><td colspan="4"><b>Nacionalidade:</b> ${p.conjugue.nac||'Brasileiro(a)'}</td></tr>`:''}
+<tr><td colspan="4"><b>Endereço residencial:</b> ${p.end||'_________________________________'}</td></tr>
+<tr><td><b>Bairro:</b> ${p.bairro||'___________'}</td><td><b>Município:</b> ${(p.mun||'Horizonte').split('/')[0]}</td><td><b>UF:</b> ${(p.mun||'/CE').split('/')[1]||'CE'}</td><td><b>CEP:</b> ${p.cep||'________'}</td></tr>
+<tr><td colspan="2"><b>Contato:</b> ${p.fone||'_____________________'}</td><td colspan="2"><b>E-mail:</b> ${p.email||'_____________________'}</td></tr>
 </table>
-<div class="cl"><h3>CLÁUSULA PRIMEIRA – DO EMPREENDIMENTO IMOBILIÁRIO (LOTEAMENTO)</h3>
-<p>O VENDEDOR é Proprietário e legítimo possuidor do(s) imóvel(éis) respectivamente descrito(s) na(s) matrícula(s) nº 7198, do Cartório do 2° Ofício de Registro de Imóveis da Comarca de Horizonte/CE, onde está implantado o Loteamento denominado <b>PORTAL DO HORIZONTE</b>, no município de Horizonte, no Estado do Ceará.</p></div>
-<div class="cl"><h3>CLÁUSULA SEGUNDA – DO OBJETO DO CONTRATO</h3>
-<p>O VENDEDOR se compromete a vender ao(à)(s) COMPRADOR(A)(ES), que se compromete(m) a adquirir o(s) LOTE(s) da(s) Quadra(s) constante(s) do loteamento mencionado na Cláusula Primeira, venda esta feita <i>"ad-corpus"</i>.</p>
+<p class="cl-titulo">CLÁUSULA PRIMEIRA – DO EMPREENDIMENTO IMOBILIÁRIO (LOTEAMENTO)</p>
+<p>O VENDEDOR é Proprietário e legítimo possuidor do(s) imóvel(éis) respectivamente descrito(s) na(s) matrícula(s) nº 7198, do Cartório do 2° Ofício de Registro de Imóveis da Comarca de Horizonte/CE, onde está implantado o Loteamento denominado <b>PORTAL DO HORIZONTE</b>, no município de Horizonte, no Estado do Ceará.</p>
+<p class="cl-titulo">CLÁUSULA SEGUNDA – DO OBJETO DO PRESENTE CONTRATO DE PROMESSA DE COMPRA E VENDA</p>
+<p>O VENDEDOR se compromete a vender ao(à)(s) COMPRADOR(A)(ES), que, por sua vez, se compromete(m) a adquirir o(s) LOTE(s) da(s) Quadra(s) constante(s) do loteamento mencionado na Cláusula Primeira, venda esta feita <i>"ad-corpus"</i>, sendo o(s) imóvel(éis), desta forma, um corpo certo e determinado, considerado pelo seu conjunto e não em atenção à área declarada, que assume caráter meramente enunciativo, contendo as características, divisas e confrontações a seguir:</p>
 <p><b>2.1 IMÓVEL:</b></p>
 <table class="tc">
-  <tr><th colspan="3">Empreendimento: LOTEAMENTO PORTAL DO HORIZONTE – HORIZONTE/CE</th></tr>
-  <tr><td colspan="3"><b>Endereço:</b> ${end}</td></tr>
-  <tr><th>Quadra</th><th>Lote</th><th>Área</th></tr>
-  <tr><td style="text-align:center"><b>${l.q}</b></td><td style="text-align:center"><b>${l.l}</b></td><td style="text-align:center"><b>${l.area.toFixed(2).replace('.',',')} m²</b></td></tr>
-  <tr><td style="vertical-align:top;padding:4px 5px;width:70px"><b>Descrição</b></td><td colspan="2" class="db">${desc}</td></tr>
-  <tr><td colspan="3"><b>Matrícula:</b> nº 7198, Cartório do 2° Ofício de Registro de Imóveis da Comarca de Horizonte/CE</td></tr>
+<tr><th colspan="3">Empreendimento: LOTEAMENTO PORTAL DO HORIZONTE – HORIZONTE/CE</th></tr>
+<tr><td colspan="3"><b>Endereço:</b> ${end}</td></tr>
+<tr><th>Quadra</th><th>Lote</th><th>Área m²</th></tr>
+<tr><td style="text-align:center"><b>${l.q}</b></td><td style="text-align:center"><b>${l.l}</b></td><td style="text-align:center"><b>${String(l.area||0).replace('.',',')} m²</b></td></tr>
+<tr><td style="padding:4px 5px;font-weight:bold;vertical-align:top">Descrição</td><td colspan="2" class="db">${desc}</td></tr>
+<tr><td colspan="3"><b>Matrícula:</b> nº 7.198, Cartório do 2° Ofício de Registro de Imóveis da Comarca de Horizonte/CE</td></tr>
 </table>
-<p><b>PARÁGRAFO PRIMEIRO.</b> O(A)(s) COMPRADOR(A)(ES) declara(m) conhecer a localização e topografia do(s) imóvel(éis), aceitando que a área poderá sofrer alteração em até 5%, sem direito a ressarcimento, pois a venda é feita <i>ad corpus.</i></p>
-<p><b>PARÁGRAFO SEGUNDO.</b> A responsabilidade do VENDEDOR está limitada à execução das obras de infraestrutura. As ligações de serviços públicos (água, luz) são de responsabilidade e custo do COMPRADOR.</p>
-<p><b>PARÁGRAFO QUINTO.</b> O COMPRADOR declara concordar: a) Em respeitar as restrições urbanísticas; b) Em providenciar sondagens do solo às próprias expensas; c) Ficará sob sua responsabilidade a construção de fossa séptica, filtro anaeróbico e sumidouro (NBRs 7.229/93 e 13.969/97).</p></div>
-<div class="cl pb"><h3>CLÁUSULA TERCEIRA – DO PREÇO, PRAZO E CONDIÇÕES DE PAGAMENTO</h3>
-<p><b>3.1 PREÇO TOTAL:</b> R$ ${BR(l.preco)} (${numExt(l.preco)}).</p>
+<p><b>PARÁGRAFO PRIMEIRO.</b> O(A)(s) COMPRADOR(A)(ES) declara(m) conhecer a localização e topografia do(s) imóvel(éis) ora comercializado(s), aceitando expressamente as condições aqui previstas, declarando, ainda, estar(em) consciente(s) de que a área e as medidas do perímetro do(s) Lote(s) poderão sofrer alteração, à maior ou à menor, em até 5% (cinco por cento), sem que tal fato gere direito a qualquer ressarcimento ou indenização, vez que a presente venda é feita na condição <i>ad corpus.</i></p>
+<p><b>PARÁGRAFO SEGUNDO.</b> A responsabilidade do(a)(s) VENDEDOR(A)(ES) para com o(a)(s) COMPRADOR(A)(ES) está limitada à execução das obras de infraestrutura que permitam às concessionárias de serviços públicos a conexão das novas redes e equipamentos gerais, cabendo ao(à)(s) COMPRADOR(A)(ES) solicitar(em), a suas expensas, as ligações dos serviços públicos (água e luz e qualquer outro) em relação ao(s) lote(s).</p>
+<p><b>PARÁGRAFO TERCEIRO.</b> As unidades imobiliárias autônomas (lotes) do supracitado Loteamento terão suas respectivas construções erigidas pelo(a)(s) COMPRADOR(A)(ES), com recursos próprios, sendo objeto deste contrato apenas o terreno, sem qualquer edificação, ficando ainda registrado que o(a)(s) COMPRADOR(A)(ES) está(ão) ciente(s) de que a efetivação da ligação individual da energia elétrica no(s) lote(s) fica à critério da concessionária de serviço público.</p>
+<p><b>PARÁGRAFO QUARTO.</b> O(A)(s) VENDEDOR(A)(ES) não se responsabiliza(m) pela efetiva ligação e regularidade no fornecimento de água e energia elétrica, cabendo às respectivas concessionárias fornecedoras do serviço tal obrigação.</p>
+<p><b>PARÁGRAFO QUINTO.</b> O(A)(s) COMPRADOR(A)(ES) declara(m) ter ciência e concordar, sem restrições de qualquer natureza:</p>
+<p class="al">a) Em respeitar as restrições urbanísticas estabelecidas pelo município e/ou pelo Regulamento do Loteamento, sob pena de arcar com as multas previstas, sem prejuízo de demais cominações decorrentes do descumprimento de obrigações previstas neste contrato;</p>
+<p class="al">b) Que, em razão da conformação, das características e especificações próprias do(s) Lote(s), deverá analisar e providenciar, às próprias expensas, as sondagens do solo necessárias à elaboração do projeto de fundações e de escoamento de águas pluviais, tomando todas as demais medidas pertinentes, com vista a evitar prejuízos à edificação que implantará no(s) Lote(s) e aos lotes vizinhos;</p>
+<p class="al">c) Ficará sob sua inteira responsabilidade a construção de fossa séptica, com filtro anaeróbico e sumidouro, em conformidade com as normas emanadas pela Associação Brasileira de Normas Técnicas (NBRs 7.229/93 e 13.969/97), sendo também de sua inteira responsabilidade a manutenção de referido equipamento, uma vez que o loteamento não será servido por rede coletora de esgoto.</p>
+<p class="cl-titulo pb">CLÁUSULA TERCEIRA – DO PREÇO, PRAZO E CONDIÇÕES DE PAGAMENTO</p>
+<p><b>3.1 PREÇO TOTAL:</b> O preço total a ser pago pelo(s) Comprador(es) é R$ ${BR(l.preco)} (${numExt(l.preco)}).<br>Será pago da seguinte forma:</p>
 <table class="tc">
-  <tr><th>Condição</th><th>Valor</th><th>Vencimento / Observação</th></tr>
-  <tr><td>Entrada</td><td>${p.entrada?BR(parseFloat(p.entrada.replace(/[^\d,.]/g,'').replace(',','.'))||0):BR(l.entrada)}</td><td>Na assinatura do contrato</td></tr>
-  <tr><td><b>${p.prazo} parcelas mensais</b></td><td><b>${BR(p.parc)}</b></td><td>1ª parcela: ${fD(p.dt1)}</td></tr>
-  <tr><td>Reajuste</td><td colspan="2">Anualmente pelo IGP-M (FGV) a partir da 13ª parcela</td></tr>
+<tr><th>Condição</th><th>Qtd.</th><th>Valor unitário</th><th>Vencimento</th></tr>
+<tr><td>Entrada</td><td>1</td><td>${ent}</td><td>Na assinatura</td></tr>
+<tr><td>Parcelas mensais</td><td><b>${p.prazo}×</b></td><td><b>${BR(p.parc)}</b></td><td>1ª em ${fD(p.dt1)}</td></tr>
 </table>
-<p class="al">a) ${p.prazo} parcelas mensais de ${BR(p.parc)}, vencendo a primeira em ${fD(p.dt1)}, reajustáveis pelo IGP-M a partir da 13ª parcela.</p>
-<p class="al">b) A comissão de corretagem é de responsabilidade exclusiva do Comprador (Art. 725, Código Civil).</p>
-<p><b>PARÁGRAFO QUARTO.</b> Pagamentos via carnês e/ou boletos bancários ou na sede do VENDEDOR: Av. Santos Dumont, nº 3131 A, Sala 217, Aldeota, Fortaleza/CE.</p>
-<p><b>PARÁGRAFO SÉTIMO.</b> O não recebimento do boleto NÃO exime o COMPRADOR do pagamento na data aprazada.</p></div>
-<div class="cl"><h3>CLÁUSULA QUARTA – DO INADIMPLEMENTO, DA MORA E DA RESCISÃO</h3>
-<p>O atraso sujeitará o COMPRADOR à: correção monetária; <b>juros de mora de 0,33% ao dia</b>; <b>multa de 10%</b>; honorários de 10% (extrajudicial) e 20% (judicial).</p>
-<p><b>PARÁGRAFO SEGUNDO.</b> Com 2 ou mais parcelas em atraso, o COMPRADOR será notificado para quitar em 15 dias, sob pena de rescisão imediata.</p>
-<p><b>PARÁGRAFO QUARTO.</b> Em caso de rescisão por inadimplência: a) Retenção de <b>30%</b> do valor pago; b) Devolução dos <b>70%</b> restantes na forma acordada.</p></div>
-<div class="cl"><h3>CLÁUSULA QUINTA – OUTRAS HIPÓTESES DE RESCISÃO</h3><p>Inadimplemento de IPTU; cessão sem consentimento; constituição de ônus reais; processos judiciais sobre o imóvel; insolvência do Comprador.</p></div>
-<div class="cl"><h3>CLÁUSULA SEXTA – DA POSSE</h3><p>O COMPRADOR é imitido na posse precária na assinatura, podendo construir após: a) entrega da infraestrutura; b) quitação de 10% do valor; c) autorização escrita do VENDEDOR.</p></div>
-<div class="cl"><h3>CLÁUSULA SÉTIMA – DOS TRIBUTOS</h3><p>Todos os tributos, impostos e taxas sobre o imóvel são de responsabilidade do COMPRADOR desde o recebimento do lote.</p></div>
-<div class="cl"><h3>CLÁUSULA OITAVA – DAS SERVIDÕES</h3><p>O COMPRADOR obriga-se a permitir gratuitamente a passagem de obras de drenagem e canalizações que sejam realizadas pelos Poderes Públicos.</p></div>
-<div class="cl"><h3>CLÁUSULA NONA – DAS RESTRIÇÕES DE USO E OCUPAÇÃO</h3><p>O COMPRADOR deve obedecer às determinações da Prefeitura de Horizonte e demais Órgãos Públicos referentes à utilização do lote.</p></div>
-<div class="cl"><h3>CLÁUSULA DÉCIMA – DA CESSÃO E TRANSFERÊNCIA</h3><p>Cessão permitida apenas com: estar em dia com todas as obrigações; pagamento de 1 salário mínimo por contrato a título de despesas administrativas; anuência expressa do VENDEDOR.</p></div>
-<div class="cl"><h3>CLÁUSULA DÉCIMA PRIMEIRA – DA ESCRITURA DEFINITIVA</h3><p>O VENDEDOR outorgará a escritura definitiva após quitação total do preço. Despesas com escritura, ITBI e registros são de responsabilidade exclusiva do COMPRADOR.</p></div>
-<div class="cl"><h3>CLÁUSULA DÉCIMA SEGUNDA – DA CESSÃO DOS CRÉDITOS E CRI</h3><p>O VENDEDOR reserva-se o direito de ceder os créditos a terceiros. Os créditos poderão servir de lastro para emissão de CCI e CRI (Leis nº 9.514/1997 e nº 10.931/2004).</p></div>
-<div class="cl"><h3>CLÁUSULA DÉCIMA TERCEIRA – DISPOSIÇÕES FINAIS</h3>
-<p>I – Contrato irrevogável e irretratável enquanto cumpridas suas cláusulas.</p>
-<p>V – O COMPRADOR deve comunicar qualquer alteração cadastral em até 5 dias úteis.</p>
-<p>VI – Comissão de corretagem por conta exclusiva do COMPRADOR.</p>
-<p>VIII – A assinatura eletrônica possui plena validade jurídica (MP nº 2.200-2/2001 e Lei nº 14.063/2020).</p></div>
-<div class="cl"><h3>CLÁUSULA DÉCIMA QUARTA – DO FORO</h3>
-<p>Fica eleito o foro da Comarca de Horizonte/CE para dirimir quaisquer questões oriundas deste contrato.</p>
-<p>E por estarem assim ajustadas, assinam em 02 (duas) vias de igual teor, com 02 (duas) testemunhas.</p></div>
-<p style="text-align:right;margin-top:18px"><b>Horizonte/CE, ${dte}.</b></p>
-<p style="text-align:right;font-size:8.5pt">Contrato Nº ${p.num} &nbsp;|&nbsp; Corretor: ${p.corretor||'—'} · CRECI: ${p.creci||'—'}</p>
-<div class="assgrid" style="margin-top:24px">
-  <div class="assitem"><div class="assln"><b>VENDEDOR(A)(ES):</b><br>CASTANHA EMPREENDIMENTOS IMOBILIÁRIOS LTDA<br>CNPJ: 21.613.396/0001-12<br><b>ALESSANDRA SALES ROLIM BERTOSI</b><br>CPF: 028.120.403-94</div></div>
-  <div class="assitem"><div class="assln"><b>COMPRADOR(A)(ES):</b><br>${p.comprador||'____________________________'}<br>CPF: ${p.cpf||'____________________________'}${p.conjugue&&p.conjugue.nome?`<br><br>${p.conjugue.nome}<br>CPF: ${p.conjugue.cpf||'____________________________'}`:''}</div></div>
+<p class="al">a) ${p.prazo} (${numExt(parseInt(p.prazo))}) parcelas mensais de R$ ${BR(p.parc)}, vencendo-se a primeira em ${fD(p.dt1)} e as demais no mesmo dia dos meses subsequentes, reajustáveis anualmente com base no IGP-M da Fundação Getúlio Vargas, a partir do primeiro mês do segundo ano (13ª parcela).</p>
+<p class="al">b) A comissão de corretagem é direito resguardado pelo Artigo 725 da Lei 10.406/02, ficando o(s) Comprador(es) desde já ciente(s) de que em caso de eventual desfazimento do presente Contrato, os valores pagos à título de comissão de corretagem serão descontados dos valores já pagos pelo promitente comprador.</p>
+<p class="al">c) A comissão de corretagem é de responsabilidade exclusiva de pagamento do(s) Comprador(es), ficando este(s) desde já ciente(s) de que em caso de eventual desfazimento do presente Contrato, os valores pagos à título de comissão de corretagem não serão devolvidos.</p>
+<p><b>PARÁGRAFO PRIMEIRO.</b> O preço constante no caput dessa cláusula representa o valor real e atual do(s) imóvel(éis) comercializado(s), sendo certo que os encargos e atualização monetária incidentes sobre as prestações previstas neste instrumento e sobre o saldo devedor do preço do(s) lote(s) são pós-fixados e, em decorrência, não estão sujeitos à desindexação ou deflação a qualquer título.</p>
+<p><b>PARÁGRAFO SEGUNDO.</b> Na hipótese de o índice escolhido no caput da Cláusula Terceira vir a ser extinto, deixar de ser publicado ou sofrer algum impedimento, aplicar-se-á automaticamente o INPC (Índice Nacional de Preços ao Consumidor), aferido pelo Instituto Brasileiro de Geografia e Estatística e, na ausência deste, o IPC (Índice de Preços ao Consumidor), da Fundação Instituto de Pesquisas Econômicas da USP, ou, ainda, o IGP (Índice Geral de Preços), publicado pela Fundação Getúlio Vargas.</p>
+<p><b>PARÁGRAFO TERCEIRO.</b> Cada vez que ocorrer atraso na publicação do índice adotado, o(a)(s) COMPRADOR(A)(ES) pagará(ão) atualização monetária idêntica à do último mês publicado e, tão logo seja conhecido o daquele período, serão acertadas as diferenças eventualmente existentes, sendo certo que a atualização monetária prevista neste contrato não caracteriza qualquer pena ou remuneração, mas significa apenas o reestabelecimento do poder de compra da moeda diante dos efeitos da inflação, tendo em vista preservar o equilíbrio econômico-financeiro deste contrato.</p>
+<p><b>PARÁGRAFO QUARTO.</b> As prestações previstas no caput desta cláusula e parágrafos respectivos serão pagas através de carnês e/ou boletos bancários emitidos em favor do(a)(s) VENDEDOR(A)(ES), por meio do sistema bancário, lotéricas e similares, ou na sede desta, situada na Av. Santos Dumont, nº 3131 A, Sala 217, Aldeota, na cidade de Fortaleza, no Estado do Ceará.</p>
+<p><b>PARÁGRAFO QUINTO.</b> A quitação de todo e qualquer pagamento será dada sob a ressalva de eventual constatação e cobrança posterior de qualquer diferença apurada pelo(a)(s) VENDEDOR(A)(ES), seja por mero lapso no recebimento, seja em razão de reajustamento ou decorrente de encargos e demais obrigações estabelecidas neste contrato.</p>
+<p><b>PARÁGRAFO SEXTO.</b> Qualquer pagamento efetuado de forma divergente da estipulada no parágrafo quarto desta cláusula será desconsiderado para quaisquer fins ou efeitos de direito, bem como considerar-se-ão não realizados os pagamentos efetuados através de cheques não compensados.</p>
+<p><b>PARÁGRAFO SÉTIMO.</b> O não recebimento do boleto bancário e/ou carnês respectivos NÃO exime o(a)(s) COMPRADOR(A)(ES) de efetuar(em) o pagamento de qualquer prestação deste contrato na data aprazada, ficando avisado(s) de que, caso não receba(m) o boleto com antecedência mínima de 05 (cinco) dias úteis antes do vencimento, deverá(ão) requerer junto ao(à)(s) VENDEDOR(A)(ES), no horário comercial, a emissão da 2ª via.</p>
+<p><b>PARÁGRAFO OITAVO.</b> Na hipótese do(a)(s) VENDEDOR(A)(ES), por si ou através de estabelecimento bancário, receber(em) pagamento sem as penalidades previstas nesse contrato, tal fato, mesmo que reiterado, não impedirá o(a)(s) VENDEDOR(A)(ES) de corrigir(em) a omissão, a qualquer tempo, permanecendo íntegras e exigíveis todas as cláusulas e condições deste contrato.</p>
+<p><b>PARÁGRAFO NONO.</b> Fica facultado ao(à)(s) VENDEDOR(A)(ES) aceitar(em) proposta do(a)(s) COMPRADOR(A)(ES) de antecipação total ou parcial das parcelas do saldo devedor atualizado monetariamente, ficando convencionado que a antecipação do pagamento das parcelas não ensejará a concessão de qualquer tipo de desconto, índice de deflação ou redutor.</p>
+<p><b>PARÁGRAFO DÉCIMO.</b> O(a)(s) COMPRADOR(A)(ES) fica(m) terminantemente proibido(a)(s) de efetuar(em) o pagamento de parcela posterior quando existirem prestações vencidas anteriormente em aberto.</p>
+<p><b>PARÁGRAFO DÉCIMO PRIMEIRO.</b> O(A)(s) COMPRADOR(A)(ES) tem(êm) pleno conhecimento e concorda(m) expressamente que o saldo devedor, durante toda a vigência deste contrato, será composto de: a) Prestações vincendas e parcelas vencidas não quitadas; b) Atualização monetária reajustada de acordo com a variação anual do IGP-M; c) Diferenças encontradas mensalmente; d) Encargos contratuais, fiscais e legais não satisfeitos, como por exemplo: IPTU, juros de mora de 10% a.m., multa de 10%, honorários advocatícios de 10% (extrajudicial) e 20% (judicial).</p>
+<p class="cl-titulo pb">CLÁUSULA QUARTA – DO INADIMPLEMENTO, DA MORA E DA RESCISÃO</p>
+<p>O atraso no pagamento de quaisquer das prestações do saldo do preço sujeitará o(a)(s) COMPRADOR(A)(ES) à correção monetária e/ou atualização da parcela em atraso; ao pagamento de <b>juros de mora de 0,33% ao dia</b> e <b>multa convencional de 10% (dez por cento)</b> sobre o valor da dívida vencida e não paga (principal/correção/juros), além do ressarcimento das despesas com cobrança, emolumentos devidos em caso de notificação extrajudicial, custas processuais e honorários advocatícios na base de <b>10% (dez por cento)</b>, na hipótese de atuação de advogado em composição extrajudicial, e <b>20% (vinte por cento)</b>, quando houver a propositura de qualquer tipo de demanda judicial.</p>
+<p><b>PARÁGRAFO PRIMEIRO.</b> Verificado o inadimplemento do(a)(s) COMPRADOR(A)(ES), este(a)(s) poderá(ão) ter seu nome e/ou crédito imediatamente negativado junto aos órgãos de proteção ao crédito, em especial o SPC – Serviço de Proteção ao Crédito.</p>
+<p><b>PARÁGRAFO SEGUNDO.</b> Quando a inadimplência remontar a 02 (duas) ou mais parcelas, consecutivas ou não, o(a)(s) COMPRADOR(A)(ES) será(ão) notificado(s) extrajudicialmente (via Correios, mediante carta com aviso de recebimento – AR e/ou Cartório de Registro de Títulos e Documentos), para, no prazo improrrogável de <b>15 (quinze) dias corridos</b>, contados de seu recebimento, pagar(em) a dívida vencida, purgando a mora, sob pena de incorrer(em) em inadimplência absoluta, podendo dar ensejo à rescisão imediata e automática do presente compromisso.</p>
+<p><b>PARÁGRAFO TERCEIRO.</b> No caso de restar configurada a inadimplência absoluta, o(a)(s) VENDEDOR(A)(ES) poderá(ão), a seu exclusivo critério, adotar quaisquer das seguintes providências:</p>
+<p class="al">a) Considerar RESCINDIDO de pleno direito o presente contrato, não obstante o seu caráter de irrevogabilidade e irretratabilidade, independentemente de qualquer outra formalidade jurídica;</p>
+<p class="al">b) Receber pura e simplesmente as quantias devidas, acrescidas ou não dos encargos contratuais;</p>
+<p class="al">c) Promover a cobrança da dívida vencida e não paga, acrescida de todos os seus encargos legais e contratuais, podendo, se lhe convier, ingressar com o processo de execução.</p>
+<p><b>PARÁGRAFO QUARTO.</b> Optando o(a)(s) VENDEDOR(A)(ES) pela rescisão deste instrumento, por ter restado configurado o inadimplemento absoluto do(a)(s) COMPRADOR(A)(ES), serão tomadas as seguintes providências:</p>
+<p class="al">a) Deduzir-se-ão das prestações pagas pelo(a)(s) COMPRADOR(A)(ES) o percentual de <b>30% (trinta por cento)</b>, à título de ressarcimento da VENDEDORA pelas despesas com publicidade, encargos fiscais e tributários, vantagens de fruição e uso eventualmente auferidas pelo(a)(s) COMPRADOR(A)(ES);</p>
+<p class="al">b) Abatidos os valores constantes na alínea "a", será feita a devolução ao(à)(s) COMPRADOR(A)(ES) dos <b>70% (setenta por cento)</b> remanescentes do saldo, ficando pactuado, desde já, que essa devolução será feita na forma acordada entre as partes.</p>
+<p><b>PARÁGRAFO QUINTO.</b> Em caso de rescisão deste contrato, motivada pelo(a)(s) COMPRADOR(A)(ES), fica assegurado ao(à)(s) VENDEDOR(A)(ES) o direito de se reintegrar, liminarmente e imediatamente, na posse do(s) lote(s) objeto deste contrato, com suas benfeitorias e melhoramentos, independentemente de qualquer outra medida judicial ou extrajudicial.</p>
+<p><b>PARÁGRAFO SEXTO.</b> Sendo o presente contrato rescindido por causa de inadimplência absoluta do(a)(s) COMPRADOR(A)(ES) e caso se torne necessário o ajuizamento de demanda judicial para a retomada do(s) imóvel(éis), todas as despesas processuais e honorários advocatícios no percentual de 20% (vinte por cento) correrão por conta do(a)(s) COMPRADOR(A)(ES).</p>
+<p><b>PARÁGRAFO SÉTIMO.</b> Quando a rescisão do contrato se der por vontade do(a)(s) COMPRADOR(A)(ES) ou for causada por este(a)(s), independentemente de haver ou não inadimplência, também serão aplicáveis ao caso a Cláusula Quarta e seus respectivos parágrafos para fins de devolução. O presente contrato é um título executivo extrajudicial, nos termos do disposto no inciso II, do artigo 585, do Código de Processo Civil.</p>
+<p class="cl-titulo">CLÁUSULA QUINTA – DAS OUTRAS HIPÓTESES DE RESCISÃO</p>
+<p>O presente poderá ainda ser rescindido nos seguintes casos:</p>
+<p class="al">a) Se houver o inadimplemento de qualquer uma das cláusulas assumidas pelo(a)(s) COMPRADOR(A)(ES), em especial quanto ao pagamento do IPTU referente ao imóvel comercializado;</p>
+<p class="al">b) Se o(a)(s) COMPRADOR(A)(ES), enquanto houver saldo em favor do(a)(s) VENDEDOR(A)(ES), ceder, prometer ceder, ou de qualquer forma transmitir a terceiros, parcial ou totalmente, os direitos e obrigações decorrentes deste contrato, sem o prévio e expresso consentimento do(a)(s) VENDEDOR(A)(ES);</p>
+<p class="al">c) Se o(a)(s) COMPRADOR(A)(ES) pretender(em) constituir e/ou constituir(em) sobre o(s) imóvel(éis) e/ou direitos aquisitivos objeto deste contrato, ônus reais ou pessoais, enquanto não quitada integralmente a sua dívida;</p>
+<p class="al">d) Se contra o(a)(s) COMPRADOR(A)(ES) for(em) movido(s) processo(s) ou ação(ões) de qualquer natureza, ou decretada medidas judiciais que, de algum modo, tenham efeito direto ou indireto sobre o imóvel objeto deste contrato;</p>
+<p class="al">e) Se o(a)(s) COMPRADOR(A)(ES) tornar(em)-se insolvente(s) nos termos das leis civis.</p>
+<p class="cl-titulo">CLÁUSULA SEXTA – DA POSSE DO(S) IMÓVEL(ÉIS) OBJETO DO PRESENTE CONTRATO</p>
+<p>O(A)(s) COMPRADOR(A)(ES) será(ão) imitido(a)(s) na posse precária do(s) lote(s) quando da assinatura deste contrato, exercendo-a, a título precário, em nome do(a)(s) VENDEDOR(A)(ES) até a efetiva quitação do preço do(s) lote(s).</p>
+<p><b>PARÁGRAFO PRIMEIRO.</b> O(A)(s) COMPRADOR(A)(ES) só poderá(ão) construir no(s) lote(s) comercializado(s) após a observação concomitante das seguintes condições: a) Efetiva entrega das respectivas obras de infraestrutura; b) A quitação do valor correspondente a <b>10% (dez por cento)</b> do valor integral deste instrumento; c) Mediante autorização escrita do(a)(s) VENDEDOR(A)(ES).</p>
+<p><b>PARÁGRAFO SEGUNDO.</b> O(A)(s) COMPRADOR(A)(ES) deverá(ão) requerer previamente e por escrito, ao(à)(s) VENDEDOR(A)(ES), autorização para construção de edificações e/ou benfeitorias a serem efetuadas no(s) imóvel(éis) objeto deste instrumento, de modo que serão consideradas inexistentes todas e quaisquer benfeitorias e/ou edificação que: a) Forem feitas à revelia do(a)(s) VENDEDOR(A)(ES); b) Forem erigidas quando o(a)(s) COMPRADOR(A)(ES) estiver(em) inadimplente(s).</p>
+<p><b>PARÁGRAFO TERCEIRO.</b> A eventual autorização para erigir construções concedida pelo(a)(s) VENDEDOR(A)(ES) não exime o(a)(s) COMPRADOR(A)(ES) de requer(em) e obter(em) as devidas permissões e/ou aprovações perante as autoridades competentes.</p>
+<p><b>PARÁGRAFO QUARTO.</b> O(A)(s) COMPRADOR(A)(ES), desde o recebimento do(s) Lote(s) até a outorga da respectiva escritura pública, deverá(ão) adotar todas as medidas necessárias para a correta conservação do(s) referido(s) Lote(s), respondendo diretamente por qualquer dano causado ao(s) Lote(s) ou às áreas públicas e privativas do Loteamento.</p>
+<p class="cl-titulo">CLÁUSULA SÉTIMA – DOS TRIBUTOS, IMPOSTOS, TAXAS E DEMAIS DESPESAS</p>
+<p>A partir da data do recebimento do(s) respectivo(s) lote(s), correrão exclusivamente por conta do(a)(s) COMPRADOR(A)(ES) todos os tributos, impostos ou taxas incidentes sobre o(s) imóvel(éis) objeto deste contrato, mesmo que os seus lançamentos ou avisos estejam em nome do(a)(s) VENDEDOR(A)(ES) ou terceiros, obrigando-se o(a)(s) COMPRADOR(A)(ES) a pagá-los na época própria junto às repartições competentes.</p>
+<p><b>PARÁGRAFO PRIMEIRO.</b> Tão logo recebam a posse precária do(s) lote(s), o(a)(s) COMPRADOR(A)(ES) deverá(ão) providenciar a inscrição do(s) lote(s) no cadastro imobiliário da Prefeitura do município sede deste empreendimento e pagar os respectivos tributos.</p>
+<p><b>PARÁGRAFO SEGUNDO.</b> O não pagamento, em seus vencimentos, de qualquer prestação de impostos, taxas ou contribuições gerará o direito de o(a)(s) VENDEDOR(A)(ES) considerar(em) rescindido o presente contrato.</p>
+<p><b>PARÁGRAFO TERCEIRO.</b> Se constatado pelo(a)(s) VENDEDOR(A)(ES) a existência de prestações dos aludidos tributos não pagas pelo(a)(s) COMPRADOR(A)(ES), assistirá ao(à)(s) VENDEDOR(A)(ES) a faculdade de efetuar(em) o pagamento e cobrar do(a)(s) COMPRADOR(A)(ES) o montante total dessa dívida, corrigido monetariamente.</p>
+<p class="cl-titulo">CLÁUSULA OITAVA</p>
+<p>O(A)(s) COMPRADOR(A)(ES) obriga(m)-se expressamente a permitir a passagem gratuitamente, pelo(s) lote(s) ora negociado(s), de obras de drenagem, canalizações de água servida, potável e pluvial e de esgoto, que eventualmente sejam realizadas pelos Poderes Públicos ou por terceiros.</p>
+<p><b>PARÁGRAFO ÚNICO.</b> O(A)(s) COMPRADOR(A)(ES), desde já, nomeia(m) e constitui(em) o(a)(s) VENDEDOR(A)(ES) sua(s) procuradora(s), em caráter irrevogável e irretratável, na forma do artigo 684 do Código Civil, para a finalidade específica de instituir as servidões que se fizerem necessárias à implementação do Loteamento.</p>
+<p class="cl-titulo">CLÁUSULA NONA – DAS LEIS E REGULAMENTOS E DAS RESTRIÇÕES DE USO E OCUPAÇÃO DO(S) LOTE(S)</p>
+<p>O(A)(s) COMPRADOR(A)(ES) deverá(ão) obedecer rigorosamente as determinações da Prefeitura de Horizonte e demais Órgãos Públicos competentes, referente à utilização e aproveitamento do(s) lote(s), assim como todas as regulamentações aplicáveis à espécie, não podendo fazer instalações prejudiciais ao(s) lote(s) vizinho(s), responsabilizando-se inteiramente por eventuais infrações às leis, regulamentos e posturas que devam ser observadas.</p>
+<p><b>PARÁGRAFO PRIMEIRO.</b> O(A)(s) COMPRADOR(A)(ES) responde(m) por todo e qualquer acidente de que natureza for, que ocorrer a pessoas, animais ou bens, por negligência sua e/ou de terceiros contratados, deixando poços abertos, alicerces sem proteção e obras inacabadas.</p>
+<p><b>PARÁGRAFO SEGUNDO.</b> É de inteira responsabilidade do(a)(s) COMPRADOR(A)(ES) obter(em) da Prefeitura do município, CREA/CE, SEMACE e de onde mais se fizer necessário, as devidas aprovações e licenças administrativas necessárias para erigir a construção que lhe(s) aprouver.</p>
+<p><b>PARÁGRAFO TERCEIRO.</b> As construções que o(a)(s) COMPRADOR(A)(ES) desejar(em) erigir, além de obedecerem as determinações legais da municipalidade, ficarão adstritas à observância das normas para edificação, uso e ocupação do solo:</p>
+<p class="al">a) Quaisquer benfeitorias feitas fora dos limites do(s) imóvel(éis) serão removidas às expensas do(a)(s) COMPRADOR(A)(ES);</p>
+<p class="al">b) Enquanto não edificar(em), o(a)(s) COMPRADOR(A)(ES) deverá(ão) providenciar a limpeza de seu(s) lote(s), pelo menos uma vez a cada ano;</p>
+<p class="al">c) Não será permitida a ocupação de lote(s) vizinho(s) para fins de canteiros de obras, depósito de materiais ou quaisquer outras finalidades sem prévia autorização por escrito do proprietário/possuidor.</p>
+<p class="cl-titulo pb">CLÁUSULA DÉCIMA – DA CESSÃO E TRANSFERÊNCIA</p>
+<p>Os direitos e obrigações oriundos deste contrato somente poderão ser cedidos ou transferidos pelo(a)(s) COMPRADOR(A)(ES) a outrem se, prévia e concomitantemente, forem observadas as seguintes condições:</p>
+<p class="al">a) Esteja(m) o(a)(s) COMPRADOR(A)(ES) rigorosamente em dia com todas as suas obrigações contratuais, inclusive no que se refere aos pagamentos das parcelas, IPTU e demais taxas;</p>
+<p class="al">b) Se o(a)(s) CESSIONÁRIO(A)(S) responsabilizar(em)-se pelo pagamento do saldo devedor então existente, sub-rogando-se integralmente em todas as estipulações deste contrato;</p>
+<p class="al">c) Apresente(m) ao(à)(s) VENDEDOR(A)(ES) as certidões negativas de tributos municipais;</p>
+<p class="al">d) Pague(m) ao(à)(s) VENDEDOR(A)(ES) o valor equivalente a 01 (um) salário mínimo vigente à época, por cada contrato, a título de despesas administrativas;</p>
+<p class="al">e) Compareça o(a)(s) VENDEDOR(A)(ES) expressamente como interveniente(s) anuente(s) no referido pacto.</p>
+<p><b>PARÁGRAFO PRIMEIRO.</b> A transferência, cessão ou promessa de cessão dos direitos e obrigações oriundos do presente contrato, firmada(s) pelo(a)(s) COMPRADOR(A)(ES), NÃO terão efeito perante o(a)(s) VENDEDOR(A)(ES) senão após a sua expressa anuência.</p>
+<p><b>PARÁGRAFO SEGUNDO.</b> Fica terminantemente vedado ao(à)(s) COMPRADOR(A)(ES) transferir parte certa e determinada do lote compromissado, sob pena de rescisão do presente contrato.</p>
+<p><b>PARÁGRAFO TERCEIRO.</b> Sendo o(a)(s) COMPRADOR(A)(ES) casado(a)(s), no caso de transferência deste contrato para terceiro e/ou desistência (rescisão), fica(m) este(a)(s) obrigado(a)(s) a obter a outorga, por escrito, do referido cônjuge para a efetivação do aludido ato.</p>
+<p><b>PARÁGRAFO QUARTO.</b> Todas as disposições estabelecidas neste contrato obrigam não apenas ao(s) primeiro(s) e atual(ais) COMPRADOR(A)(ES), mas também a todos que venham sucedê-lo(s) a qualquer título.</p>
+<p class="cl-titulo">CLÁUSULA DÉCIMA PRIMEIRA – DA OUTORGA DA ESCRITURA DEFINITIVA</p>
+<p>O(A)(s) VENDEDOR(A)(ES) obriga(m)-se a outorgar ao(à)(s) COMPRADOR(A)(ES), ou a quem este(a)(s) indicar(em), a competente minuta de quitação e, posterior, escritura definitiva de compra e venda, quando houver recebido o total do preço estipulado e desde que esteja(m) em dia com todas as obrigações inerentes ao(s) lote(s) adquirido(s). Todas as despesas com escrituras, registros, impostos de transmissão inter-vivos – ITBI e outras despesas existentes, necessárias ao registro deste contrato, lavratura e registro da escritura definitiva, correrão por conta exclusiva do(a)(s) COMPRADOR(A)(ES).</p>
+<p><b>PARÁGRAFO PRIMEIRO.</b> Para a obtenção da minuta visando a confecção da escritura pública, o(a)(s) COMPRADOR(A)(ES) deverá(ão), além de comprovar a inexistência de débitos fiscais incidentes sobre o(s) imóvel(éis) desde a data de celebração deste contrato, providenciar as certidões exigidas por lei e pagar ao(à)(s) VENDEDOR(A)(ES) a <b>"taxa de minuta"</b> equivalente a ½ (meio) salário mínimo vigente à época.</p>
+<p><b>PARÁGRAFO SEGUNDO.</b> Para maior comodidade do(a)(s) COMPRADOR(A)(ES), o(a)(s) VENDEDOR(A)(ES) poderá(ão) indicar o Cartório onde deverá ser lavrada a escritura definitiva. Em qualquer situação, a assinatura do representante do(a)(s) VENDEDOR(A)(ES) será obtida na cidade de Fortaleza, em sua sede.</p>
+<p><b>PARÁGRAFO TERCEIRO.</b> Decorrido o prazo máximo de <b>180 (cento e oitenta) dias</b> contados da quitação total do preço pactuado e satisfeitas todas as cláusulas e condições deste contrato, deverá(ão) o(a)(s) COMPRADOR(A)(ES), independentemente de qualquer solicitação por parte do(a)(s) VENDEDOR(A)(ES), tomar todas as providências visando a lavratura da escritura pública de compra e venda definitiva.</p>
+<p><b>PARÁGRAFO QUARTO.</b> No prazo máximo de <b>30 (trinta) dias</b> contados da lavratura da escritura pública em favor do(a)(s) COMPRADOR(A)(ES), deverá(ão) este(a)(s) levá-la ao Cartório de Registro de Imóveis competente, a fim de transferir a propriedade do bem para o seu nome.</p>
+<p class="cl-titulo">CLÁUSULA DÉCIMA SEGUNDA – DA CESSÃO DOS CRÉDITOS E DOS CERTIFICADOS DE RECEBÍVEIS IMOBILIÁRIOS</p>
+<p>Fica reservado ao(à)(s) VENDEDOR(A)(ES) o direito de ceder a terceiros, no todo ou em parte, os direitos creditórios decorrentes deste instrumento, independentemente de aviso ou concordância do(a)(s) COMPRADOR(A)(ES), subsistindo todas as cláusulas e condições deste instrumento em favor do cessionário.</p>
+<p><b>PARÁGRAFO PRIMEIRO.</b> Os créditos ora constituídos poderão ser securitizados, podendo também servir de lastro para a emissão de Cédulas de Crédito Imobiliário (CCI) e Certificados de Recebíveis Imobiliários (CRI), consoante o disposto nas Leis nº 9.514/1997 e nº 10.931/2004.</p>
+<p class="cl-titulo pb">CLÁUSULA DÉCIMA TERCEIRA – DISPOSIÇÕES FINAIS</p>
+<p><b>I –</b> O presente contrato é pactuado com a cláusula de irrevogabilidade e irretratabilidade, desde que cumpridas todas as cláusulas e condições nele acordadas, dele não podendo, pois, as partes se arrependerem, obrigando-se a cumprir até o final, por si, seus herdeiros e sucessores.</p>
+<p><b>II –</b> Ocorrendo a hipótese de haver mais de um COMPRADOR constante no preâmbulo deste contrato, inclusive marido e mulher, os mesmos serão solidariamente responsáveis por todas as obrigações assumidas em razão deste contrato, pelo que nomeiam-se e constituem-se mutuamente procuradores um do outro, para receber citação inicial, notificações, intimações e ciências de todo e qualquer procedimento decorrente do presente contrato, inclusive processos judiciais.</p>
+<p><b>III –</b> Sempre que o(a)(s) VENDEDOR(A)(ES) tiver(em) que adotar medidas judiciais provocadas pelo inadimplemento do(a)(s) COMPRADOR(A)(ES) ou para fazer valer quaisquer dos direitos decorrentes deste contrato, ficará(ão) o(a)(s) COMPRADOR(A)(ES) responsável(eis) pelo pagamento de custas processuais, despesas administrativas, multas especificadas neste contrato e honorários advocatícios fixados em <b>20% (vinte por cento)</b> sobre o valor da causa.</p>
+<p><b>IV –</b> O fato de o(a)(s) VENDEDOR(A)(ES) não usar(em) dos direitos decorrentes deste contrato, quando do descumprimento por parte do(a)(s) COMPRADOR(A)(ES) de quaisquer de suas obrigações, não importará na desistência dos referidos direitos, que poderão ser exigidos a todo tempo.</p>
+<p><b>V –</b> O(A)(s) COMPRADOR(A)(ES) obriga(m)-se a comunicar, por escrito e através de carta com protocolo de entrega enviada para o endereço do(a)(s) VENDEDOR(A)(ES), no prazo de 05 (cinco) dias úteis contados do fato, toda e qualquer alteração que porventura vier a ocorrer em seus dados cadastrais, de modo especial em seu endereço e/ou estado civil.</p>
+<p><b>VI –</b> Corre unicamente por conta do(a)(s) COMPRADOR(A)(ES) a comissão de corretagem, sendo por este(a)(s) aceito expressamente que tal comissão, paga ao(à)(s) corretor(a)(es) de imóveis, refere-se à intermediação na compra e venda deste imóvel.</p>
+<p><b>VII –</b> O(A)(s) COMPRADOR(A)(ES), se pessoa física, solteira, viúva, divorciada, separada judicialmente ou convivente em união estável, declara, sob responsabilidade civil e criminal, que o seu estado civil é o declarado no preâmbulo deste contrato.</p>
+<p><b>VIII –</b> Caso optem pela assinatura digital, as partes reconhecem que a assinatura eletrônica utilizada para a formalização deste instrumento possuirá plena validade jurídica, nos termos da Medida Provisória nº 2.200-2, de 24 de agosto de 2001, que institui a Infraestrutura de Chaves Públicas Brasileira (ICP-Brasil), conferindo às assinaturas digitais certificadas por autoridade credenciada os mesmos efeitos legais das assinaturas manuscritas. Adicionalmente, as partes acordam que assinaturas eletrônicas não certificadas pela ICP-Brasil também serão consideradas válidas, desde que atendam aos requisitos de autenticidade, integridade e não repúdio, conforme os artigos 104 e 107 do Código Civil, e o artigo 10, § 2º, da referida Medida Provisória. As assinaturas eletrônicas serão suficientes para comprovar a manifestação de vontade das partes, observados os requisitos estabelecidos na Lei nº 14.063/2020.</p>
+<p class="cl-titulo">CLÁUSULA DÉCIMA QUARTA – DO FORO</p>
+<p>Fica eleito, nos termos da lei, o foro da situação do(s) imóvel(is) – Comarca de Horizonte/CE – para conhecer e dirimir quaisquer questões originárias do presente contrato, respondendo a parte vencida pelos honorários de advogado constituído pela parte vendedora.</p>
+<p>E por estarem às partes assim ajustadas, contratadas, assinam o presente instrumento, livre e espontaneamente, em 02 (duas) vias de igual teor e forma, juntamente com duas (02) testemunhas instrumentais.</p>
+<p style="text-align:right;margin-top:20px"><b>Horizonte/CE, ${dte}.</b></p>
+<p style="text-align:right;font-size:8.5pt;color:#555">Contrato Nº ${p.num} &nbsp;|&nbsp; Corretor: ${p.corretor||'—'} &nbsp;|&nbsp; CRECI: ${p.creci||'—'}</p>
+<div class="assgrid" style="margin-top:28px">
+<div class="assitem"><div class="assln"><b>VENDEDOR(A)(ES):</b><br>CASTANHA EMPREENDIMENTOS IMOBILIÁRIOS LTDA<br>CNPJ/MF: 21.613.396/0001-12<br><br><b>ALESSANDRA SALES ROLIM BERTOSI</b><br>CPF/MF: 028.120.403-94</div></div>
+<div class="assitem"><div class="assln"><b>COMPRADOR(A)(ES):</b><br>${p.comprador||'____________________________________'}<br>CPF/MF: ${p.cpf||'____________________________________'}${p.conjugue&&p.conjugue.nome?`<br><br><b>CÔNJUGE/COMPANHEIRO(A):</b><br>${p.conjugue.nome}<br>CPF/MF: ${p.conjugue.cpf||'____________________________________'}`:''}</div></div>
 </div>
 <div class="assgrid">
-  <div class="assitem"><div class="assln"><b>TESTEMUNHA:</b><br>WYARLLEY DANTAS FURTADO<br>CPF: 044.803.833-10</div></div>
-  <div class="assitem"><div class="assln"><b>TESTEMUNHA:</b><br>THYAGO FURTADO MEDEIROS DA SILVA<br>CPF: 969.848.303-97</div></div>
+<div class="assitem"><div class="assln"><b>TESTEMUNHA:</b><br>WYARLLEY DANTAS FURTADO<br>CPF/MF: 044.803.833-10</div></div>
+<div class="assitem"><div class="assln"><b>TESTEMUNHA:</b><br>THYAGO FURTADO MEDEIROS DA SILVA<br>CPF/MF: 969.848.303-97</div></div>
 </div>
-<div style="text-align:center;margin-top:18px">
-  <div class="assln" style="max-width:280px;margin:0 auto"><b>CORRETOR:</b><br>${p.corretor||'____________________________'}<br>CRECI: ${p.creci||'____________________________'}</div>
+<div style="text-align:center;margin-top:16px">
+<div class="assln" style="max-width:300px;margin:0 auto;display:inline-block"><b>CORRETOR RESPONSÁVEL:</b><br>${p.corretor||'____________________________________'}<br>CRECI: ${p.creci||'____________________________________'}</div>
 </div>
-<div class="rodape" style="margin-top:26px">Av. Santos Dumont, nº 3131 A – Sala 217 – Aldeota – Fortaleza/CE – CEP: 60.150-165 &nbsp;|&nbsp; CNPJ: 21.613.396/0001-12 &nbsp;|&nbsp; Contrato Nº ${p.num} &nbsp;|&nbsp; Pág. 13 a 13</div>
+<div class="rodape" style="margin-top:28px">Av. Santos Dumont, nº 3131 A – Sala 217 – Aldeota – Fortaleza/CE – CEP: 60.150-165 &nbsp;|&nbsp; CNPJ: 21.613.396/0001-12 &nbsp;|&nbsp; Contrato Nº ${p.num} &nbsp;|&nbsp; Pág. 13 de 13</div>
 </body></html>`;
   dlFile(html,`Contrato_${p.num}_Q${l.q}_L${l.l}.html`,'text/html;charset=utf-8');
 }
