@@ -460,15 +460,16 @@ let LS=null,LH=[],LF=[],LC=[];
       if(d.hist)localStorage.setItem('ph_hist',JSON.stringify(d.hist));
       if(d.fila)localStorage.setItem('ph_fila',JSON.stringify(d.fila));
       if(d.ctr)localStorage.setItem('ph_ctr',JSON.stringify(d.ctr));
-      if(d.usuarios)saveUsers(d.usuarios);
+      if(d.usuarios)localStorage.setItem(UK,JSON.stringify(d.usuarios));
       if(d.corretores)localStorage.setItem(CK,JSON.stringify(d.corretores));
     }
   }catch(e){console.warn('Firebase offline, usando cache local:',e);}
+  const _hadFs=await db.collection('dados').doc('main').get().then(s=>s.exists).catch(()=>false);
   LS=JSON.parse(localStorage.getItem('ph_lotes')||'null');
   LH=JSON.parse(localStorage.getItem('ph_hist')||'[]');
   LF=JSON.parse(localStorage.getItem('ph_fila')||'[]');
   LC=JSON.parse(localStorage.getItem('ph_ctr')||'[]');
-  if(!LS){LS=LI.map(l=>({...l,obs:''}));save();}
+  if(!LS){LS=LI.map(l=>({...l,obs:''}));save();}else if(!_hadFs){save();}
   document.getElementById('fb-loading').style.display='none';
   db.collection('dados').doc('main').onSnapshot(snap=>{
     if(!snap.exists)return;
