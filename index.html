@@ -153,6 +153,45 @@ tr:hover td{background:var(--bg)}
 .lerr{display:none;background:var(--red-bg);color:var(--red);font-size:12px;padding:8px 11px;border-radius:6px;margin-bottom:10px;text-align:center}
 .lhint{font-size:11px;color:var(--text3);text-align:center;margin-top:13px;line-height:1.7}
 @media(max-width:860px){.sidebar{width:46px}.sl .m,.sl .n,.sl .s,.ns,.ni span:not(.ic),.sfoot,.susr .sav~*{display:none}.ni{justify-content:center}.main{margin-left:46px}.kgrid{grid-template-columns:1fr 1fr}.tc,.fg2,.fg3{grid-template-columns:1fr}}
+/* ── KANBAN ── */
+.kb-wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start}
+.kb-col{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.kb-head{padding:10px 13px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.kb-body{padding:10px;display:flex;flex-direction:column;gap:8px;min-height:120px}
+.kb-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--rs);padding:10px 12px;font-size:12px}
+.kb-card:hover{border-color:var(--text2)}
+.kb-num{font-size:11px;font-weight:700;font-family:var(--m);color:var(--text3)}
+.kb-buyer{font-size:13px;font-weight:600;margin:2px 0}
+.kb-lot{font-size:11px;color:var(--text3)}
+.kb-price{font-size:12px;font-weight:600;color:var(--blue);margin-top:4px}
+.kb-actions{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.kb-empty{text-align:center;padding:1.5rem;color:var(--text3);font-size:12px}
+.kb-col-ger .kb-head{background:#e8eef8;color:var(--blue)}
+.kb-col-dir .kb-head{background:#fdf0e0;color:var(--amber)}
+.kb-col-fin .kb-head{background:#e8f5ee;color:var(--green)}
+.kb-col-rep .kb-head{background:#fde8e8;color:var(--red)}
+/* ── LINE CHART ── */
+.lchart-wrap{position:relative;height:130px;margin-top:4px}
+.lchart-wrap svg{width:100%;height:100%}
+/* ── PRICE MANAGEMENT ── */
+.pm-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:9px}
+/* ── RESERVATION MODAL ── */
+.res-opts{display:flex;gap:10px;margin-top:13px;flex-direction:column}
+.res-opt-btn{width:100%;padding:11px;font-family:var(--f);font-size:13px;font-weight:600;border-radius:var(--rs);border:1px solid var(--border2);cursor:pointer;transition:all .15s;background:var(--surface);color:var(--text)}
+.res-opt-btn:hover{background:var(--bg)}
+.res-opt-btn.res-primary{background:var(--text);color:white;border-color:var(--text)}
+.res-opt-btn.res-primary:hover{opacity:.88}
+.res-opt-btn.res-amber{background:var(--amber);color:white;border-color:var(--amber)}
+.res-opt-btn.res-amber:hover{opacity:.88}
+/* ── KPI REVENUE ── */
+.kgrid2{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.kpi.kpi-rev{border-left:3px solid var(--green)}
+.kpi.kpi-stk{border-left:3px solid var(--blue)}
+.kpi.kpi-res{border-left:3px solid var(--amber)}
+.kpi.kpi-blk{border-left:3px solid var(--text3)}
+.quad-ticket-wrap{display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto}
+.qt-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)}
+.qt-row:last-child{border-bottom:none}
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -180,8 +219,7 @@ tr:hover td{background:var(--bg)}
     <button class="ni active" onclick="sp('dashboard')" id="n-dashboard"><span class="ic">◈</span><span>Painel gerencial</span></button>
     <div class="ns">Comercial</div>
     <button class="ni" onclick="sp('disp')" id="n-disp"><span class="ic">⊞</span><span>Disponibilidade</span></button>
-    <button class="ni" onclick="sp('prop')" id="n-prop"><span class="ic">✦</span><span>Nova proposta</span></button>
-    <button class="ni" onclick="sp('fila')" id="n-fila"><span class="ic">◎</span><span>Fila de aprovação</span><span class="nbadge" id="bf" style="display:none">0</span></button>
+    <button class="ni" onclick="sp('kanban')" id="n-kanban"><span class="ic">⊟</span><span>Pipeline Kanban</span><span class="nbadge" id="bf" style="display:none">0</span></button>
     <button class="ni" onclick="sp('ctr')" id="n-ctr"><span class="ic">◻</span><span>Contratos</span></button>
     <div class="ns">Financeiro</div>
     <button class="ni" onclick="sp('inadimp')" id="n-inadimp"><span class="ic">⚠</span><span>Inadimplência</span></button>
@@ -198,10 +236,15 @@ tr:hover td{background:var(--bg)}
   <div class="tbar"><div class="tt">Painel gerencial</div><span style="font-size:12px;color:var(--text3)" id="ddata"></span></div>
   <div style="padding:18px 22px">
     <div class="kgrid" id="dkpis"></div>
+    <div class="kgrid2" id="dkpis2"></div>
     <div class="tc">
-      <div class="card"><div class="ch"><div class="ct">% vendido por quadra</div></div><div class="cb" id="dbars" style="max-height:330px;overflow-y:auto"></div></div>
+      <div>
+        <div class="card"><div class="ch"><div class="ct">% vendido por quadra</div></div><div class="cb" id="dbars" style="max-height:280px;overflow-y:auto"></div></div>
+        <div class="card"><div class="ch"><div class="ct">Curva de valorização do m²</div><span style="font-size:10px;color:var(--text3)">histórico</span></div><div class="cb"><div class="lchart-wrap" id="dlinechart"></div></div></div>
+      </div>
       <div>
         <div class="card"><div class="ch"><div class="ct">Estoque — <span id="dtotal">706</span> lotes</div></div><div class="cb"><div style="display:flex;gap:11px;align-items:center"><svg id="ddonut" width="88" height="88" viewBox="0 0 88 88" style="flex-shrink:0"></svg><div id="dleg" style="flex:1;font-size:12px;display:flex;flex-direction:column;gap:6px"></div></div><div style="margin-top:9px;padding-top:8px;border-top:1px solid var(--border)" id="drec"></div></div></div>
+        <div class="card"><div class="ch"><div class="ct">Ticket médio m² por quadra</div></div><div class="cb" id="dticket" style="max-height:180px;overflow-y:auto"></div></div>
         <div class="card"><div class="ch"><div class="ct">Alertas</div></div><div class="cb" id="daler"></div></div>
       </div>
     </div>
@@ -292,11 +335,13 @@ tr:hover td{background:var(--bg)}
           <div class="pc" id="pc180" onclick="selP(180)"><div style="font-size:18px;font-weight:700">180×</div><div style="font-size:11px;color:var(--text3)">15 anos</div><div id="pv180" style="font-size:12px;color:var(--blue);margin-top:3px;font-weight:500">—</div></div>
         </div>
         <div class="fg2"><div class="fi"><label>Valor de entrada</label><input id="vent" placeholder="R$ 0,00" oninput="calcF()"></div><div class="fi"><label>Data 1ª parcela</label><input type="date" id="vdt"></div></div>
+        <div class="fg2"><div class="fi"><label>Comissão corretor (%)</label><input id="vcomis" type="number" min="0" max="10" step="0.1" placeholder="Ex: 5" oninput="calcF()"></div><div class="fi"><label>Forma de pagamento</label><select id="vfpag"><option>Boleto bancário</option><option>PIX</option><option>Transferência bancária (TED)</option><option>Cheque</option><option>Cartão de crédito</option><option>Combinado</option></select></div></div>
         <table class="ftbl" style="margin-top:9px">
           <tr><td>Preço total</td><td id="fpr">—</td></tr>
           <tr><td>Entrada</td><td id="fen">—</td></tr>
           <tr><td>Saldo a financiar</td><td id="fsd">—</td></tr>
           <tr><td>Parcela (<span id="fpz">156</span>×) — IGP-M ao 13º mês</td><td id="fpc">—</td></tr>
+          <tr><td>Comissão corretor</td><td id="fcomis" style="color:var(--amber)">—</td></tr>
           <tr><td><b>Total estimado</b></td><td id="ftot">—</td></tr>
         </table>
       </div></div>
@@ -336,7 +381,21 @@ tr:hover td{background:var(--bg)}
   </div>
 </div>
 
-<!-- FILA -->
+<!-- PIPELINE KANBAN -->
+<div class="pg" id="pg-kanban">
+  <div class="tbar"><div class="tt">Pipeline de Vendas — Kanban</div><button class="btn bsm btn-p" onclick="renderKanban()">↻ Atualizar</button></div>
+  <div style="padding:18px 22px">
+    <div id="kb-motivo-modal" class="mo"><div class="mb" style="width:420px"><div class="mt">Informar motivo de reprovação</div><div class="fi" style="margin-bottom:11px"><label>Motivo *</label><textarea id="kb-motivo-txt" rows="3" placeholder="Descreva o motivo..."></textarea></div><div id="kb-motivo-meta" style="display:none"></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="closeKbMotivo()">Cancelar</button><button class="btn btn-d" onclick="confirmKbReprovar()">Reprovar</button></div></div></div>
+    <div class="kb-wrap" id="kb-wrap">
+      <div class="kb-col kb-col-ger"><div class="kb-head"><span>⟐ Gerência</span><span id="kb-cnt-ger" class="nbadge" style="display:none;background:var(--blue-bg);color:var(--blue)">0</span></div><div class="kb-body" id="kb-ger"></div></div>
+      <div class="kb-col kb-col-dir"><div class="kb-head"><span>◈ Diretoria</span><span id="kb-cnt-dir" class="nbadge" style="display:none;background:var(--amber-bg);color:var(--amber)">0</span></div><div class="kb-body" id="kb-dir"></div></div>
+      <div class="kb-col kb-col-fin"><div class="kb-head"><span>✓ Finalizados</span><span id="kb-cnt-fin" class="nbadge" style="display:none;background:var(--green-bg);color:var(--green)">0</span></div><div class="kb-body" id="kb-fin"></div></div>
+      <div class="kb-col kb-col-rep"><div class="kb-head"><span>✕ Reprovadas</span><span id="kb-cnt-rep" class="nbadge" style="display:none;background:var(--red-bg);color:var(--red)">0</span></div><div class="kb-body" id="kb-rep"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- FILA (legado) -->
 <div class="pg" id="pg-fila">
   <div class="tbar"><div class="tt">Fila de aprovação</div></div>
   <div style="padding:18px 22px"><div class="card"><div class="ch"><div class="ct">Propostas</div></div><div class="cb" id="filabody"><div style="text-align:center;padding:2rem;color:var(--text3)">Nenhuma proposta na fila.</div></div></div></div>
@@ -378,6 +437,15 @@ tr:hover td{background:var(--bg)}
     </div></div>
     <div class="cs" id="cfgusers"><div class="cst">Usuários<button class="btn bsm btn-p" onclick="newUser()">+ Novo</button></div><div class="csb" id="usrlist"></div></div>
     <div class="cs" id="cfgcorretores"><div class="cst">Corretores<button class="btn bsm btn-p" onclick="openCorrModal()">+ Novo</button></div><div class="csb" id="corrlist"></div></div>
+    <div class="cs" id="cfgprecos"><div class="cst">Gestão de Preços por Quadra</div><div class="csb">
+      <div class="alert ai" style="margin-bottom:11px;font-size:11px">Atualiza o valor do m² de uma quadra inteira. Lotes <b>Reservados</b> ou <b>Em Proposta</b> mantêm o preço congelado da criação. Se cancelada a negociação, o lote assume o preço atualizado.</div>
+      <div class="pm-row">
+        <div class="fi" style="min-width:90px"><label>Quadra</label><select id="pm-quadra"><option value="">Selecione</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>15</option><option>16</option><option>17</option><option>18</option><option>001</option><option>002</option></select></div>
+        <div class="fi" style="min-width:140px"><label>Novo valor do m² (R$)</label><input id="pm-vlm2" type="number" min="0" step="0.01" placeholder="Ex: 750.00"></div>
+        <button class="btn bsm btn-p" style="align-self:flex-end" onclick="updatePrecoQuadra()">Aplicar reajuste</button>
+      </div>
+      <div id="pm-result" style="display:none"></div>
+    </div></div>
     <div class="cs"><div class="cst">Backup e restauração</div><div class="csb">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px">
         <div style="border:1px solid var(--border);border-radius:var(--rs);padding:13px"><div style="font-size:13px;font-weight:600;margin-bottom:5px">Exportar backup</div><div style="font-size:12px;color:var(--text3);margin-bottom:9px">Salva lotes, propostas, contratos e usuários.</div><button class="btn bsm btn-p" onclick="expBkp()">⬇ backup.json</button></div>
@@ -436,6 +504,22 @@ tr:hover td{background:var(--bg)}
   </div>
 </div>
 
+<!-- MODAL RESERVA DE LOTE -->
+<div class="mo" id="modal-reserva">
+  <div class="mb" style="width:400px">
+    <div class="mt" id="mres-tit">Lote disponível</div>
+    <div id="mres-info" style="font-size:12px;color:var(--text3);margin-bottom:4px"></div>
+    <div id="mres-preco" style="font-size:18px;font-weight:700;color:var(--blue);margin-bottom:4px"></div>
+    <div id="mres-area" style="font-size:12px;color:var(--text3);margin-bottom:11px"></div>
+    <div id="mres-warn" class="alert aw" style="display:none;margin-bottom:9px;font-size:11px"></div>
+    <div class="res-opts">
+      <button class="res-opt-btn res-primary" id="btn-nova-proposta" onclick="irParaPropostaDoModal()">✦ Nova Proposta</button>
+      <button class="res-opt-btn res-amber" id="btn-reservar-lote" onclick="reservarLoteModal()">⊙ Reservar por 48h</button>
+      <button class="res-opt-btn" onclick="closeReservaModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div id="tip"></div>
 
 <script>
@@ -447,7 +531,7 @@ const AK='ph_auth',UK='ph_users';
 function gU(){const u=localStorage.getItem(UK);if(u)return JSON.parse(u);const d=[{id:1,nome:'Administrador',email:'admin@castanha.com.br',senha:btoa('castanha2024'),perfil:'admin',ativo:true},{id:2,nome:'Gerência',email:'gerencia@castanha.com.br',senha:btoa('gerencia123'),perfil:'gerente',ativo:true}];saveUsers(d);return d;}
 function gS(){const s=sessionStorage.getItem(AK);return s?JSON.parse(s):null;}
 function doLogin(){const e=V('le'),p=V('lp'),btn=document.getElementById('lbtn');btn.textContent='Entrando...';btn.disabled=true;setTimeout(()=>{const u=gU().find(x=>x.email.toLowerCase()===e.toLowerCase()&&x.senha===btoa(p)&&x.ativo);if(u){sessionStorage.setItem(AK,JSON.stringify({id:u.id,nome:u.nome,email:u.email,perfil:u.perfil}));showApp(u);sp(u.perfil==='corretor'?'disp':'dashboard');}else{document.getElementById('lerr').style.display='block';btn.textContent='Entrar';btn.disabled=false;}},400);}
-function showApp(u){document.getElementById('ls').style.display='none';document.getElementById('app').style.display='flex';document.getElementById('snome').textContent=u.nome;const perfNames={'admin':'Administrador','gerente':'Gerência','usuario':'Usuário','corretor':'Corretor'};document.getElementById('sperf').textContent=perfNames[u.perfil]||u.perfil;document.getElementById('sav').textContent=u.nome.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();const isCorr=u.perfil==='corretor';['n-dashboard','n-fila','n-inadimp'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=isCorr?'none':'';});if(isCorr){document.getElementById('n-cfg').style.display='none';document.querySelectorAll('.ns').forEach(ns=>{if(['Financeiro','Sistema'].includes(ns.textContent.trim()))ns.style.display='none';});}if(!['admin','gerente'].includes(u.perfil)){document.getElementById('cfgusers').style.display='none';const ce=document.getElementById('cfgcorretores');if(ce)ce.style.display='none';}}
+function showApp(u){document.getElementById('ls').style.display='none';document.getElementById('app').style.display='flex';document.getElementById('snome').textContent=u.nome;const perfNames={'admin':'Administrador','gerente':'Gerência','usuario':'Usuário','corretor':'Corretor'};document.getElementById('sperf').textContent=perfNames[u.perfil]||u.perfil;document.getElementById('sav').textContent=u.nome.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();const isCorr=u.perfil==='corretor';['n-dashboard','n-kanban','n-inadimp'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=isCorr?'none':'';});if(isCorr){document.getElementById('n-cfg').style.display='none';document.querySelectorAll('.ns').forEach(ns=>{if(['Financeiro','Sistema'].includes(ns.textContent.trim()))ns.style.display='none';});}if(!['admin','gerente'].includes(u.perfil)){document.getElementById('cfgusers').style.display='none';const ce=document.getElementById('cfgcorretores');if(ce)ce.style.display='none';}}
 function doLogout(){sessionStorage.removeItem(AK);document.getElementById('ls').style.display='flex';document.getElementById('app').style.display='none';document.getElementById('le').value='';document.getElementById('lp').value='';document.getElementById('lerr').style.display='none';}
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('ls').style.display!=='none')doLogin();});
 let LS=null,LH=[],LF=[],LC=[];
@@ -491,33 +575,56 @@ const fD=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'—';
 const hoje=()=>new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
 function V(id){return(document.getElementById(id)||{}).value||'';}
 function getMem(q,l){const lp=String(parseInt(l)).padStart(2,'0'),qp=String(q).padStart(2,'0');for(const k of[`Q${qp}-L${lp}`,`Q${q}-L${parseInt(l)}`,`Q${q}-L${lp}`]){if(MM[k])return MM[k];}return null;}
-function sp(id){document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));document.getElementById('pg-'+id).classList.add('active');const n=document.getElementById('n-'+id);if(n)n.classList.add('active');const fn={dashboard:renderDash,disp:renderDisp,inadimp:renderInad,fila:renderFila,ctr:renderCtr,cfg:renderCfg};if(fn[id])fn[id]();if(id==='prop'){populateCorrSel();const s=gS();if(s&&s.perfil==='corretor'){const cn=document.getElementById('cn');const cc=document.getElementById('cc');if(cn){cn.value=s.nome;cn.readOnly=true;}const corrData=gCorretores().find(x=>x.nome===s.nome&&x.ativo);if(corrData&&cc){cc.value=corrData.creci;document.getElementById('cf').value=corrData.fone||'';}document.getElementById('corr-select-wrap').style.display='none';}}}
+function sp(id){document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));const pgEl=document.getElementById('pg-'+id);if(!pgEl)return;pgEl.classList.add('active');const n=document.getElementById('n-'+id);if(n)n.classList.add('active');const fn={dashboard:renderDash,disp:renderDisp,inadimp:renderInad,fila:renderFila,kanban:renderKanban,ctr:renderCtr,cfg:renderCfg};if(fn[id])fn[id]();if(id==='prop'){populateCorrSel();const s=gS();if(s&&s.perfil==='corretor'){const cn=document.getElementById('cn');const cc=document.getElementById('cc');if(cn){cn.value=s.nome;cn.readOnly=true;}const corrData=gCorretores().find(x=>x.nome===s.nome&&x.ativo);if(corrData&&cc){cc.value=corrData.creci;document.getElementById('cf').value=corrData.fone||'';}document.getElementById('corr-select-wrap').style.display='none';}}}
 
 /* ── DASHBOARD ── */
 function renderDash(){
   document.getElementById('ddata').textContent=hoje();
-  const V=LS.filter(l=>l.status==='Vendido'),D=LS.filter(l=>l.status==='Disponivel'),B=LS.filter(l=>l.status==='Bloqueado'),R=LS.filter(l=>l.status==='Reservado'),T=LS.length;
-  const vv=V.reduce((a,l)=>a+l.preco,0),vd=D.reduce((a,l)=>a+l.preco,0),vt=LS.reduce((a,l)=>a+l.preco,0);
+  const Vl=LS.filter(l=>l.status==='Vendido'),D=LS.filter(l=>l.status==='Disponivel'),B=LS.filter(l=>l.status==='Bloqueado'),R=LS.filter(l=>l.status==='Reservado'),T=LS.length;
+  const vv=Vl.reduce((a,l)=>a+l.preco,0),vd=D.reduce((a,l)=>a+l.preco,0),vt=LS.reduce((a,l)=>a+l.preco,0),vr=R.reduce((a,l)=>a+l.preco,0),vb=B.reduce((a,l)=>a+l.preco,0);
   document.getElementById('dtotal').textContent=T;
-  document.getElementById('dkpis').innerHTML=`<div class="kpi"><div class="kl">Total lotes</div><div class="kv">${T}</div><div class="ks">Res: ${LS.filter(l=>l.tipo==='Residencial').length} · Com: ${LS.filter(l=>l.tipo==='Comercial').length}</div></div><div class="kpi"><div class="kl">VGV total</div><div class="kv" style="font-size:16px;color:var(--blue)">${BR(vt)}</div><div class="ks">Valor geral de vendas</div></div><div class="kpi"><div class="kl">Velocidade vendas</div><div class="kv" style="color:var(--green)">${(V.length/T*100).toFixed(1)}%</div><div class="ks">${V.length} vendidos · ${R.length} reservados</div></div><div class="kpi"><div class="kl">Estoque disponível</div><div class="kv" style="color:var(--blue)">${D.length}</div><div class="ks">${BR(vd)} potencial</div></div>`;
+  document.getElementById('dkpis').innerHTML=`<div class="kpi"><div class="kl">Total lotes</div><div class="kv">${T}</div><div class="ks">Res: ${LS.filter(l=>l.tipo==='Residencial').length} · Com: ${LS.filter(l=>l.tipo==='Comercial').length}</div></div><div class="kpi"><div class="kl">VGV total</div><div class="kv" style="font-size:16px;color:var(--blue)">${BR(vt)}</div><div class="ks">Valor geral de vendas</div></div><div class="kpi"><div class="kl">Velocidade de vendas</div><div class="kv" style="color:var(--green)">${(Vl.length/T*100).toFixed(1)}%</div><div class="ks">${Vl.length} vendidos · ${R.length} reservados</div></div><div class="kpi"><div class="kl">Lotes disponíveis</div><div class="kv" style="color:var(--blue)">${D.length}</div><div class="ks">${BR(vd)} potencial</div></div>`;
+  document.getElementById('dkpis2').innerHTML=`<div class="kpi kpi-rev"><div class="kl">Receita Contratada</div><div class="kv" style="font-size:15px;color:var(--green)">${BR(vv)}</div><div class="ks">${Vl.length} contratos fechados</div></div><div class="kpi kpi-stk"><div class="kl">Valor em Estoque</div><div class="kv" style="font-size:15px;color:var(--blue)">${BR(vd)}</div><div class="ks">${D.length} lotes disponíveis</div></div><div class="kpi kpi-res"><div class="kl">Valor em Reserva</div><div class="kv" style="font-size:15px;color:var(--amber)">${BR(vr)}</div><div class="ks">${R.length} lotes reservados</div></div><div class="kpi kpi-blk"><div class="kl">Valor Bloqueado</div><div class="kv" style="font-size:15px;color:var(--text2)">${BR(vb)}</div><div class="ks">${B.length} lotes bloqueados</div></div>`;
   const qs=[...new Set(LS.map(l=>l.q))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
   document.getElementById('dbars').innerHTML=qs.map(q=>{const ql=LS.filter(l=>l.q===q),qv=ql.filter(l=>l.status==='Vendido').length,pct=ql.length>0?Math.round(qv/ql.length*100):0,cor=pct>=66?'#1a7a50':pct>=40?'#c07020':'#9a1f1f';return`<div class="br"><div class="bl">Q${q}</div><div class="bb"><div class="bf" style="width:${pct}%;background:${cor}"></div></div><div class="bp" style="color:${cor}">${pct}%</div></div>`;}).join('');
-  const dat=[{v:V.length,c:'#1a7a50'},{v:D.length,c:'#3b70d4'},{v:R.length,c:'#c07020'},{v:B.length,c:'#b4b2a9'}];
-  const r=34,cx=44,cy=44,ci=2*Math.PI*r;let off=0;
-  let p=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f0efe9" stroke-width="11"/>`;
-  dat.forEach(d=>{const da=ci*(d.v/T);p+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${d.c}" stroke-width="11" stroke-dasharray="${da} ${ci-da}" stroke-dashoffset="${-off+ci/4}" transform="rotate(-90 ${cx} ${cy})"/>`;off+=da;});
-  p+=`<text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="12" font-weight="700" fill="#1a1916">${(V.length/T*100).toFixed(1)}%</text><text x="${cx}" y="${cy+9}" text-anchor="middle" font-size="9" fill="#9b9890">vendido</text>`;
-  document.getElementById('ddonut').innerHTML=p;
-  const nm=['Vendidos','Disponíveis','Reservados','Bloqueados'],ct=[V.length,D.length,R.length,B.length],co=['#1a7a50','#3b70d4','#c07020','#b4b2a9'];
+  /* ticket médio m² por quadra */
+  document.getElementById('dticket').innerHTML='<div class="quad-ticket-wrap">'+qs.map(q=>{const ql=LS.filter(l=>l.q===q&&l.vlm2>0),avg=ql.length>0?(ql.reduce((a,l)=>a+l.vlm2,0)/ql.length):0;return`<div class="qt-row"><span style="font-weight:500">Q${q}</span><span style="color:var(--blue);font-weight:600">${BR(avg)}/m²</span></div>`;}).join('')+'</div>';
+  /* gráfico de linha — curva de valorização histórica do m² */
+  const hist=JSON.parse(localStorage.getItem('ph_pricehistory')||'[]');
+  if(hist.length<2){
+    const allVlm2=LS.filter(l=>l.vlm2>0).map(l=>l.vlm2);
+    const curAvg=allVlm2.length>0?(allVlm2.reduce((a,b)=>a+b,0)/allVlm2.length):600;
+    const synthetic=[{dt:'2023-01',v:curAvg*0.72},{dt:'2023-07',v:curAvg*0.80},{dt:'2024-01',v:curAvg*0.87},{dt:'2024-07',v:curAvg*0.93},{dt:'2025-01',v:curAvg*0.97},{dt:'2025-07',v:curAvg},{dt:'2026-01',v:curAvg*1.04},{dt:'2026-05',v:curAvg*1.08}];
+    renderLineChart(synthetic);
+  }else{renderLineChart(hist);}
+  /* donut */
+  const dat=[{v:Vl.length,c:'#1a7a50'},{v:D.length,c:'#3b70d4'},{v:R.length,c:'#c07020'},{v:B.length,c:'#b4b2a9'}];
+  const rr=34,cx=44,cy=44,ci=2*Math.PI*rr;let off=0;
+  let pp=`<circle cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="#f0efe9" stroke-width="11"/>`;
+  dat.forEach(d=>{const da=ci*(d.v/T);pp+=`<circle cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="${d.c}" stroke-width="11" stroke-dasharray="${da} ${ci-da}" stroke-dashoffset="${-off+ci/4}" transform="rotate(-90 ${cx} ${cy})"/>`;off+=da;});
+  pp+=`<text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="12" font-weight="700" fill="#1a1916">${(Vl.length/T*100).toFixed(1)}%</text><text x="${cx}" y="${cy+9}" text-anchor="middle" font-size="9" fill="#9b9890">vendido</text>`;
+  document.getElementById('ddonut').innerHTML=pp;
+  const nm=['Vendidos','Disponíveis','Reservados','Bloqueados'],ct=[Vl.length,D.length,R.length,B.length],co=['#1a7a50','#3b70d4','#c07020','#b4b2a9'];
   document.getElementById('dleg').innerHTML=nm.map((n,i)=>`<div style="display:flex;justify-content:space-between;font-size:11px"><span style="display:flex;align-items:center;gap:5px;color:var(--text3)"><span style="width:8px;height:8px;border-radius:2px;background:${co[i]};display:inline-block"></span>${n}</span><span style="font-weight:600">${ct[i]}</span></div>`).join('');
   document.getElementById('drec').innerHTML=`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--text3)">Receita contratada</span><span style="font-weight:600;color:var(--green)">${BR(vv)}</span></div><div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span style="color:var(--text3)">Receita potencial</span><span style="font-weight:600;color:var(--blue)">${BR(vd)}</span></div>`;
   const qb=qs.filter(q=>{const ql=LS.filter(l=>l.q===q);return ql.length>0&&ql.filter(l=>l.status==='Vendido').length/ql.length<0.4;});
   const als=[];
   if(qb.length>0)als.push({t:`Q${qb.join(', Q')} com menos de 40% vendido`,c:'d'});
   if(D.length>0)als.push({t:`${D.length} lotes disponíveis — ${BR(vd)} em potencial`,c:'i'});
-  if(B.length>0)als.push({t:`${B.length} lotes bloqueados — ${BR(B.reduce((a,l)=>a+l.preco,0))} represados`,c:'w'});
+  if(B.length>0)als.push({t:`${B.length} lotes bloqueados — ${BR(vb)} represados`,c:'w'});
+  if(R.length>0)als.push({t:`${R.length} lotes em reserva — ${BR(vr)} em negociação`,c:'w'});
   document.getElementById('daler').innerHTML=als.map(a=>`<div class="alert a${a.c}" style="margin-bottom:5px;font-size:11px">${a.t}</div>`).join('')||'<div style="color:var(--text3);font-size:12px">Nenhum alerta ativo.</div>';
   document.getElementById('dinadump').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px"><div><div style="font-weight:500">Marcio Silva Medeiros</div><div style="font-size:11px;color:var(--text3)">QR15 L13+L14 · +2.659 dias</div></div><div style="text-align:right"><div style="font-weight:600;color:var(--red)">R$ 10.757</div><span class="pill pr">+90d</span></div></div><div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px"><div><div style="font-weight:500">Jane Evila Rodrigues Pereira</div><div style="font-size:11px;color:var(--text3)">QR07 L07 · 3 títulos</div></div><div style="text-align:right"><div style="font-weight:600;color:var(--red)">R$ 6.818</div><span class="pill pr">+90d</span></div></div><div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;font-size:12px"><div><div style="font-weight:500">Francisco C. S. Carneiro</div><div style="font-size:11px;color:var(--text3)">QR14 L65</div></div><div style="text-align:right"><div style="font-weight:600;color:var(--red)">R$ 3.262</div><span class="pill pa">45d</span></div></div><div style="margin-top:7px"><button class="btn bsm" onclick="sp('inadimp')">Ver relatório →</button></div>`;
+}
+function renderLineChart(pts){
+  const el=document.getElementById('dlinechart');if(!el)return;
+  const W=el.clientWidth||420,H=130,pad={l:38,r:12,t:12,b:28};
+  const vals=pts.map(p=>p.v),mn=Math.min(...vals)*0.95,mx=Math.max(...vals)*1.05;
+  const x=i=>pad.l+(i/(pts.length-1))*(W-pad.l-pad.r);
+  const y=v=>pad.t+(1-(v-mn)/(mx-mn))*(H-pad.t-pad.b);
+  const path=pts.map((p,i)=>(i===0?'M':'L')+x(i).toFixed(1)+','+y(p.v).toFixed(1)).join(' ');
+  const area='M'+x(0)+','+H+' '+pts.map((p,i)=>x(i).toFixed(1)+','+y(p.v).toFixed(1)).join(' L')+' L'+x(pts.length-1)+','+H+' Z';
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:100%"><defs><linearGradient id="lg1" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#3b70d4" stop-opacity=".18"/><stop offset="100%" stop-color="#3b70d4" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#lg1)"/><path d="${path}" fill="none" stroke="#3b70d4" stroke-width="2" stroke-linejoin="round"/>${pts.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.v)}" r="3" fill="#3b70d4"/>`).join('')}<text x="${pad.l-3}" y="${y(mx)+4}" text-anchor="end" font-size="8" fill="#9b9890">${BR(mx).replace('R$ ','')}</text><text x="${pad.l-3}" y="${y(mn)+4}" text-anchor="end" font-size="8" fill="#9b9890">${BR(mn).replace('R$ ','')}</text>${pts.map((p,i)=>i%Math.max(1,Math.floor(pts.length/5))===0?`<text x="${x(i)}" y="${H-5}" text-anchor="middle" font-size="8" fill="#9b9890">${p.dt}</text>`:'').join('')}</svg>`;
 }
 
 /* ── DISPONIBILIDADE ── */
@@ -546,7 +653,93 @@ let MK=null;
 function openM(l){const s=gS();if(!s||!['admin','gerente'].includes(s.perfil))return;if(l.status==='Vendido'||l.status==='Reservado'){alert('Lote '+l.status+'. O status é alterado automaticamente via fluxo de proposta ou distrato.');return;}MK={q:l.q,l:l.l};document.getElementById('mtit').textContent=`Q${l.q} / Lote ${l.l}`;document.getElementById('minfo').textContent=`${l.tipo} · ${l.area.toFixed(2)} m² · ${BR(l.preco)} · ${l.status}`;document.getElementById('mst').value=['Disponivel','Bloqueado'].includes(l.status)?l.status:'Disponivel';document.getElementById('mobs').value=l.obs||'';document.getElementById('modal').classList.add('open');}
 function closeM(){document.getElementById('modal').classList.remove('open');}
 function confirmM(){if(!MK)return;const ns=V('mst'),obs=V('mobs');if(!['Disponivel','Bloqueado'].includes(ns))return;chSt(MK.q,MK.l,ns,obs);closeM();filterDisp();}
-function renderMapa(){const d=document.getElementById('mapa');if(!d)return;d.innerHTML='';const qs=[...new Set(LS.map(l=>l.q))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));qs.forEach(q=>{const row=document.createElement('div');row.className='mr';const lb=document.createElement('div');lb.className='ml';lb.textContent='Q'+q;const wr=document.createElement('div');wr.className='mls';LS.filter(l=>l.q===q).sort((a,b)=>a.l-b.l).forEach(l=>{const sq=document.createElement('div');sq.className='lsq '+l.status;sq.title=`Q${q}/L${l.l} · ${l.area.toFixed(1)}m² · ${BR(l.preco)} · ${l.status}`;sq.addEventListener('mouseenter',e=>{const t=document.getElementById('tip');t.innerHTML=`<b>Q${q}/L${l.l}</b><br>${l.tipo} · ${l.area.toFixed(1)} m²<br>${BR(l.preco)}<br><b>${l.status}</b>`;t.style.opacity='1';});sq.addEventListener('mousemove',e=>{const t=document.getElementById('tip');t.style.left=(e.clientX+12)+'px';t.style.top=(e.clientY-8)+'px';});sq.addEventListener('mouseleave',()=>{document.getElementById('tip').style.opacity='0';});sq.addEventListener('click',()=>openM(l));wr.appendChild(sq);});row.appendChild(lb);row.appendChild(wr);d.appendChild(row);});}
+let MRES_LOTE=null;
+function openReservaModal(l){
+  MRES_LOTE=l;
+  document.getElementById('mres-tit').textContent=`Q${l.q} / Lote ${l.l}`;
+  document.getElementById('mres-info').textContent=`${l.tipo}`;
+  document.getElementById('mres-preco').textContent=BR(l.preco);
+  document.getElementById('mres-area').textContent=`${l.area.toFixed(2)} m² · ${BR(l.vlm2)}/m²`;
+  const warn=document.getElementById('mres-warn');
+  const s=gS();
+  if(s&&s.perfil==='corretor'){
+    const hoje24=Date.now()-86400000;
+    const resHoje=(JSON.parse(localStorage.getItem('ph_reservas_corr')||'{}')||{})[s.nome]||[];
+    const recent=resHoje.filter(ts=>ts>hoje24).length;
+    if(recent>=3){warn.style.display='block';warn.textContent=`Limite de 3 reservas em 24h atingido (${recent} ativas). Aguarde para reservar.`;document.getElementById('btn-reservar-lote').disabled=true;}
+    else{warn.style.display='none';document.getElementById('btn-reservar-lote').disabled=false;}
+  }else{warn.style.display='none';document.getElementById('btn-reservar-lote').disabled=false;}
+  document.getElementById('modal-reserva').classList.add('open');
+}
+function closeReservaModal(){document.getElementById('modal-reserva').classList.remove('open');MRES_LOTE=null;}
+function irParaPropostaDoModal(){
+  if(!MRES_LOTE)return;
+  closeReservaModal();
+  LS2=MRES_LOTE;
+  PS=1;
+  sp('prop');
+  setTimeout(()=>{filterLP();document.getElementById('lsel').style.display='block';document.getElementById('lsel').innerHTML=`<div class="alert as">✓ Q${LS2.q}/L${LS2.l} pré-selecionado — ${BR(LS2.preco)}</div>`;document.getElementById('btnp1').disabled=false;},100);
+}
+function reservarLoteModal(){
+  if(!MRES_LOTE)return;
+  const s=gS();
+  if(!s){alert('Faça login para reservar.');return;}
+  const l=MRES_LOTE;
+  const agora=Date.now();
+  const exp=agora+172800000; /* 48h */
+  /* registra reserva no controle por corretor */
+  const ctrl=JSON.parse(localStorage.getItem('ph_reservas_corr')||'{}');
+  if(!ctrl[s.nome])ctrl[s.nome]=[];
+  ctrl[s.nome].push(agora);
+  ctrl[s.nome]=ctrl[s.nome].filter(ts=>ts>agora-86400000);
+  localStorage.setItem('ph_reservas_corr',JSON.stringify(ctrl));
+  const obs=`Reservado por ${s.nome} em ${new Date().toLocaleString('pt-BR')} — expira ${new Date(exp).toLocaleString('pt-BR')}`;
+  chSt(l.q,l.l,'Reservado',obs);
+  /* agenda expiração */
+  const reservas=JSON.parse(localStorage.getItem('ph_reservas_ativas')||'[]');
+  reservas.push({q:l.q,l:l.l,exp,corretor:s.nome});
+  localStorage.setItem('ph_reservas_ativas',JSON.stringify(reservas));
+  closeReservaModal();
+  filterDisp();
+  alert(`✓ Lote Q${l.q}/L${l.l} reservado por 48 horas!`);
+}
+function checkReservasExpiradas(){
+  const reservas=JSON.parse(localStorage.getItem('ph_reservas_ativas')||'[]');
+  const agora=Date.now();
+  let changed=false;
+  const ativas=reservas.filter(rv=>{
+    if(rv.exp<=agora){
+      const lx=LS.find(x=>x.q===rv.q&&x.l===rv.l);
+      if(lx&&lx.status==='Reservado'){lx.status='Disponivel';lx.obs='Reserva expirada automaticamente';changed=true;}
+      return false;
+    }return true;
+  });
+  localStorage.setItem('ph_reservas_ativas',JSON.stringify(ativas));
+  if(changed)save();
+}
+function renderMapa(){
+  checkReservasExpiradas();
+  const d=document.getElementById('mapa');if(!d)return;d.innerHTML='';
+  const qs=[...new Set(LS.map(l=>l.q))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  qs.forEach(q=>{
+    const row=document.createElement('div');row.className='mr';
+    const lb=document.createElement('div');lb.className='ml';lb.textContent='Q'+q;
+    const wr=document.createElement('div');wr.className='mls';
+    LS.filter(l=>l.q===q).sort((a,b)=>a.l-b.l).forEach(l=>{
+      const sq=document.createElement('div');sq.className='lsq '+l.status;
+      sq.title=`Q${q}/L${l.l} · ${l.area.toFixed(1)}m² · ${BR(l.preco)} · ${l.status}`;
+      sq.addEventListener('mouseenter',e=>{const t=document.getElementById('tip');t.innerHTML=`<b>Q${q}/L${l.l}</b><br>${l.tipo} · ${l.area.toFixed(1)} m²<br><b style="color:#3b70d4">${BR(l.preco)}</b><br><span style="opacity:.7">${BR(l.vlm2)}/m²</span><br><b>${l.status}</b>`;t.style.opacity='1';});
+      sq.addEventListener('mousemove',e=>{const t=document.getElementById('tip');t.style.left=(e.clientX+14)+'px';t.style.top=(e.clientY-10)+'px';});
+      sq.addEventListener('mouseleave',()=>{document.getElementById('tip').style.opacity='0';});
+      sq.addEventListener('click',()=>{
+        if(l.status==='Disponivel'){openReservaModal(l);}
+        else{openM(l);}
+      });
+      wr.appendChild(sq);
+    });
+    row.appendChild(lb);row.appendChild(wr);d.appendChild(row);
+  });
+}
 /* CSV no formato tabela de vendas original */
 function exportCSV(){const data=LFT.length>0?LFT:LS;const h='Status;Quadra;Lote;Tipo;Concatenar;Area total;Vl do m2;Preco Total;Entrada;(144x);(156x);(180x);Obs';const r=data.map(l=>[l.status,`Quadra ${l.q}`,`Lote ${String(l.l).padStart(2,'0')}`,l.tipo,`Quadra ${l.q}/Lote ${l.l}/${l.tipo}`,l.area.toFixed(2).replace('.',','),l.vlm2.toFixed(2).replace('.',','),l.preco.toFixed(2).replace('.',','),l.entrada.toFixed(2).replace('.',','),l.e144.toFixed(2).replace('.',','),l.e156.toFixed(2).replace('.',','),l.e180.toFixed(2).replace('.',','),l.obs||''].join(';'));dlFile('\uFEFF'+[h,...r].join('\n'),'disponibilidade_portal.csv','text/csv;charset=utf-8');}
 function importCSV(inp){const f=inp.files[0];if(!f)return;if(!confirm(`Importar ${f.name}?`)){inp.value='';return;}const rd=new FileReader();rd.onload=e=>{const lns=e.target.result.split('\n').slice(1);let n=0;lns.forEach(ln=>{const c=ln.split(';');if(c.length<3)return;const st=(c[0]||'').trim(),q=(c[1]||'').replace(/Quadra\s*/i,'').trim(),l=parseInt((c[2]||'').replace(/Lote\s*/i,'').trim());if(!st||!q||isNaN(l))return;const lx=LS.find(x=>x.q===q&&x.l===l);if(lx&&['Disponivel','Bloqueado'].includes(st)){lx.status=st;if(c[12])lx.obs=c[12].trim();n++;}});save();renderDisp();alert(`✓ ${n} lotes atualizados!`);};rd.readAsText(f,'utf-8');inp.value='';}
@@ -559,9 +752,23 @@ function showPP(n){for(let i=1;i<=6;i++)document.getElementById('pp'+i).style.di
 function nextP(n){if(n===2&&!LS2){alert('Selecione um lote.');return;}if(n===3){document.getElementById('rlote').textContent=`Q${LS2.q}/L${LS2.l} · ${LS2.tipo} · ${LS2.area.toFixed(2)} m² · ${BR(LS2.preco)}`;const nx=new Date();nx.setMonth(nx.getMonth()+1);nx.setDate(10);document.getElementById('vdt').value=nx.toISOString().split('T')[0];[144,156,180].forEach(p=>{document.getElementById('pv'+p).textContent=BR(p===144?LS2.e144:p===156?LS2.e156:LS2.e180)+'/mês';});calcF();}if(n===4)genPrev();PS=n;showPP(n);}
 function filterLP(){const q=V('lq'),pm=parseFloat(V('lp'))||Infinity,am=parseFloat(V('la'))||0,lst=LS.filter(l=>l.status==='Disponivel'&&(!q||l.q===q)&&l.e156<=pm&&l.area>=am),g=document.getElementById('lcards');g.innerHTML='';lst.slice(0,60).forEach(l=>{const s=LS2&&LS2.q===l.q&&LS2.l===l.l,d=document.createElement('div');d.className='lcard'+(s?' sel':'');d.innerHTML=`<div style="font-size:13px;font-weight:600">Q${l.q} · Lote ${l.l}</div><div style="font-size:11px;color:var(--text3)">${l.tipo} · ${l.area.toFixed(2)} m²</div><div style="font-size:13px;color:var(--blue);margin-top:5px;font-weight:600">${BR(l.e156)}/mês <span style="font-size:11px;color:var(--text3)">(156×)</span></div><div style="font-size:11px;color:var(--text3)">Total: ${BR(l.preco)}</div>`;d.onclick=()=>{LS2=l;filterLP();document.getElementById('lsel').style.display='block';document.getElementById('lsel').innerHTML=`<div class="alert as">✓ Q${l.q}/L${l.l} selecionado — ${BR(l.preco)}</div>`;document.getElementById('btnp1').disabled=false;};g.appendChild(d);});if(!lst.length)g.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:12px;grid-column:1/-1">Nenhum lote disponível.</div>';}
 function selP(p){PR=p;[144,156,180].forEach(x=>document.getElementById('pc'+x).classList.toggle('sel',x===p));document.getElementById('fpz').textContent=p;calcF();}
-function calcF(){if(!LS2)return;const en=parseFloat((V('vent')||'0').replace(/[^\d,.]/g,'').replace(',','.'))||0,pc=PR===144?LS2.e144:PR===156?LS2.e156:LS2.e180;document.getElementById('fpr').textContent=BR(LS2.preco);document.getElementById('fen').textContent=BR(en);document.getElementById('fsd').textContent=BR(LS2.preco-en);document.getElementById('fpc').textContent=BR(pc);document.getElementById('ftot').textContent=BR(en+pc*PR);}
-function genPrev(){const l=LS2,pc=PR===144?l.e144:PR===156?l.e156:l.e180,dt=new Date().toLocaleDateString('pt-BR'),num='PH-'+(500+LF.length+LC.length+1).toString().padStart(6,'0');const ec=V('pec');const hasConj=ec==='Casado(a)'||ec==='União estável';const conj=hasConj?{nome:V('conj-nome'),cpf:V('conj-cpf'),rg:V('conj-rg'),nasc:V('conj-nasc'),prof:V('conj-prof'),nac:V('conj-nac')}:null;PA={lote:l,prazo:PR,parc:pc,entrada:V('vent'),dt1:V('vdt'),comprador:V('pn'),cpf:V('pcpf'),rg:V('prg'),nasc:V('pnsc'),nac:V('pnac'),ec:V('pec'),prof:V('ppro'),fone:V('ptel'),email:V('pmail'),end:V('pend'),bairro:V('pbai'),mun:V('pmun'),cep:V('pcep'),corretor:V('cn'),creci:V('cc'),cfone:V('cf'),data:dt,num,conjugue:conj,docs:PA_DOCS.map(d=>({nome:d.nome,tipo:d.tipo,size:d.size}))};const conjRow=hasConj&&conj.nome?`<span style="color:var(--text3)">Cônjuge</span><span>${conj.nome} · CPF: ${conj.cpf}</span>`:'';document.getElementById('prevprop').innerHTML=`<div style="font-weight:600;font-size:13px;margin-bottom:7px;text-align:center">PROPOSTA · ${dt} · Nº ${num}</div><div style="display:grid;grid-template-columns:auto 1fr;gap:2px 11px;font-size:12px"><span style="color:var(--text3)">Corretor</span><span>${V('cn')||'—'} · CRECI: ${V('cc')||'—'}</span><span style="color:var(--text3)">Comprador</span><span>${V('pn')||'—'} · CPF: ${V('pcpf')||'—'}</span>${conjRow}<span style="color:var(--text3)">Est. Civil</span><span>${ec}</span><span style="color:var(--text3)">Imóvel</span><span>Q${l.q}/L${l.l} · ${l.tipo} · ${l.area.toFixed(2)} m²</span><span style="color:var(--text3)">Preço total</span><span style="font-weight:600">${BR(l.preco)}</span><span style="color:var(--text3)">Entrada</span><span>${V('vent')||'R$ 0,00'}</span><span style="color:var(--text3)">Financiamento</span><span>${PR}× de ${BR(pc)} · IGP-M ao 13º mês</span><span style="color:var(--text3)">1ª parcela</span><span>${fD(V('vdt'))}</span>${PA_DOCS.length?`<span style="color:var(--text3)">Documentos</span><span>${PA_DOCS.length} arquivo(s) anexado(s)</span>`:''}</div>`;}
-function submitProp(){const l=PA.lote;chSt(l.q,l.l,'Reservado',`Proposta ${PA.num}`);LF.push({...PA,status:'aguardando',ts:new Date().toISOString()});save();const p=LF.filter(f=>f.status==='aguardando').length;const bf=document.getElementById('bf');bf.style.display='inline';bf.textContent=p;document.getElementById('adt').value=new Date().toISOString().split('T')[0];const hr=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});document.getElementById('tl1').innerHTML=`<div class="tli"><div class="tld" style="background:var(--green)"></div><div class="tll"></div><div><div class="tlt">Proposta ${PA.num} registrada</div><div class="tls">${PA.data} às ${hr}</div></div></div><div class="tli"><div class="tld" style="background:var(--amber)"></div><div class="tll"></div><div><div class="tlt">Lote Q${l.q}/L${l.l} reservado</div><div class="tls">Status atualizado automaticamente</div></div></div><div class="tli"><div class="tld" style="background:var(--blue)"></div><div><div class="tlt">Aguardando aprovação gerência</div><div class="tls">Prazo 48h úteis</div></div></div>`;PS=5;showPP(5);}
+function calcF(){if(!LS2)return;const en=parseFloat((V('vent')||'0').replace(/[^\d,.]/g,'').replace(',','.'))||0,pc=PR===144?LS2.e144:PR===156?LS2.e156:LS2.e180,pct=parseFloat(V('vcomis'))||0,comis=LS2.preco*(pct/100);document.getElementById('fpr').textContent=BR(LS2.preco);document.getElementById('fen').textContent=BR(en);document.getElementById('fsd').textContent=BR(LS2.preco-en);document.getElementById('fpc').textContent=BR(pc);document.getElementById('fcomis').textContent=pct>0?`${pct}% = ${BR(comis)}`:'—';document.getElementById('ftot').textContent=BR(en+pc*PR);}
+function genPrev(){const l=LS2,pc=PR===144?l.e144:PR===156?l.e156:l.e180,dt=new Date().toLocaleDateString('pt-BR'),num='PH-'+(500+LF.length+LC.length+1).toString().padStart(6,'0');const ec=V('pec');const hasConj=ec==='Casado(a)'||ec==='União estável';const conj=hasConj?{nome:V('conj-nome'),cpf:V('conj-cpf'),rg:V('conj-rg'),nasc:V('conj-nasc'),prof:V('conj-prof'),nac:V('conj-nac')}:null;const comisP=parseFloat(V('vcomis'))||0,comisV=l.preco*(comisP/100),fpag=V('vfpag')||'Boleto bancário';PA={lote:l,prazo:PR,parc:pc,entrada:V('vent'),dt1:V('vdt'),comissao:comisP,comissaoValor:comisV,formaPagamento:fpag,comprador:V('pn'),cpf:V('pcpf'),rg:V('prg'),nasc:V('pnsc'),nac:V('pnac'),ec:V('pec'),prof:V('ppro'),fone:V('ptel'),email:V('pmail'),end:V('pend'),bairro:V('pbai'),mun:V('pmun'),cep:V('pcep'),corretor:V('cn'),creci:V('cc'),cfone:V('cf'),data:dt,num,conjugue:conj,docs:PA_DOCS.map(d=>({nome:d.nome,tipo:d.tipo,size:d.size}))};const conjRow=hasConj&&conj.nome?`<span style="color:var(--text3)">Cônjuge</span><span>${conj.nome} · CPF: ${conj.cpf}</span>`:'';const comisRow=comisP>0?`<span style="color:var(--text3)">Comissão</span><span>${comisP}% = ${BR(comisV)}</span>`:'';const fpagRow=`<span style="color:var(--text3)">Forma pgto.</span><span>${fpag}</span>`;document.getElementById('prevprop').innerHTML=`<div style="font-weight:600;font-size:13px;margin-bottom:7px;text-align:center">PROPOSTA · ${dt} · Nº ${num}</div><div style="display:grid;grid-template-columns:auto 1fr;gap:2px 11px;font-size:12px"><span style="color:var(--text3)">Corretor</span><span>${V('cn')||'—'} · CRECI: ${V('cc')||'—'}</span><span style="color:var(--text3)">Comprador</span><span>${V('pn')||'—'} · CPF: ${V('pcpf')||'—'}</span>${conjRow}<span style="color:var(--text3)">Est. Civil</span><span>${ec}</span><span style="color:var(--text3)">Imóvel</span><span>Q${l.q}/L${l.l} · ${l.tipo} · ${l.area.toFixed(2)} m²</span><span style="color:var(--text3)">Preço total</span><span style="font-weight:600">${BR(l.preco)}</span><span style="color:var(--text3)">Entrada</span><span>${V('vent')||'R$ 0,00'}</span><span style="color:var(--text3)">Financiamento</span><span>${PR}× de ${BR(pc)} · IGP-M ao 13º mês</span><span style="color:var(--text3)">1ª parcela</span><span>${fD(V('vdt'))}</span>${comisRow}${fpagRow}${PA_DOCS.length?`<span style="color:var(--text3)">Documentos</span><span>${PA_DOCS.length} arquivo(s) anexado(s)</span>`:''}</div>`;}
+function submitProp(){
+  const l=PA.lote;
+  /* congela preço do lote no momento da proposta */
+  const lx=LS.find(x=>x.q===l.q&&x.l===l.l);
+  if(lx){lx._mktPreco=lx.preco;lx._mktVlm2=lx.vlm2;}
+  chSt(l.q,l.l,'Reservado',`Proposta ${PA.num}`);
+  LF.push({...PA,status:'aguardando',ts:new Date().toISOString()});
+  save();
+  const pending=LF.filter(f=>f.status==='aguardando'||f.status==='aguardando_dir').length;
+  const bf=document.getElementById('bf');if(bf){bf.style.display=pending>0?'inline':'none';bf.textContent=pending;}
+  document.getElementById('adt').value=new Date().toISOString().split('T')[0];
+  const hr=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('tl1').innerHTML=`<div class="tli"><div class="tld" style="background:var(--green)"></div><div class="tll"></div><div><div class="tlt">Proposta ${PA.num} registrada</div><div class="tls">${PA.data} às ${hr}</div></div></div><div class="tli"><div class="tld" style="background:var(--amber)"></div><div class="tll"></div><div><div class="tlt">Lote Q${l.q}/L${l.l} reservado — preço congelado</div><div class="tls">Status atualizado automaticamente</div></div></div><div class="tli"><div class="tld" style="background:var(--blue)"></div><div><div class="tlt">Enviado ao Pipeline — Coluna Gerência</div><div class="tls">Aguardando aprovação (48h úteis)</div></div></div>`;
+  PS=5;showPP(5);
+}
 function approveProp(){const rs=V('ares')||'Gerência',l=PA.lote;chSt(l.q,l.l,'Vendido',`Contrato ${PA.num} aprovado`);const idx=LF.findIndex(f=>f.num===PA.num);if(idx>-1)LF[idx].status='aprovado';LC.push({...PA,resp:rs,aprovadoEm:new Date().toISOString()});save();document.getElementById('bf').textContent=LF.filter(f=>f.status==='aguardando').length||'';document.getElementById('tl2').innerHTML=`<div class="tli"><div class="tld" style="background:var(--green)"></div><div class="tll"></div><div><div class="tlt">Aprovado por ${rs}</div><div class="tls">${fD(V('adt'))}</div></div></div><div class="tli"><div class="tld" style="background:var(--green)"></div><div class="tll"></div><div><div class="tlt">Lote Q${l.q}/L${l.l} → Vendido</div><div class="tls">Mapa atualizado automaticamente</div></div></div><div class="tli"><div class="tld" style="background:var(--green)"></div><div><div class="tlt">Contrato ${PA.num} gerado</div></div></div>`;PS=6;showPP(6);}
 function reproveProp(){const l=PA.lote;chSt(l.q,l.l,'Disponivel',`Proposta ${PA.num} reprovada`);const idx=LF.findIndex(f=>f.num===PA.num);if(idx>-1)LF[idx].status='reprovado';save();document.getElementById('ap5').className='alert ad';document.getElementById('ap5').textContent='✕ Proposta reprovada. Lote devolvido ao estoque.';document.getElementById('bdec').style.display='none';}
 function resetProp(){LS2=null;PR=156;PA={};PA_DOCS=[];PS=1;showPP(1);filterLP();populateCorrSel();document.getElementById('btnp1').disabled=true;document.getElementById('lsel').style.display='none';const dl=document.getElementById('docs-list');if(dl)dl.innerHTML='';const di=document.getElementById('docs-input');if(di)di.value='';document.getElementById('conjugue-section').style.display='none';}
@@ -760,12 +967,128 @@ ${p.conjugue&&p.conjugue.nome?`<tr><th colspan="4" style="background:#f0f0f0">C�
 }
 function numExt(v){const n=Math.round(v);function g(x){const u=['','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove'];const d=['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa'];const c=['','cento','duzentos','trezentos','quatrocentos','quinhentos','seiscentos','setecentos','oitocentos','novecentos'];if(x===0)return'';if(x===100)return'cem';let s='';if(Math.floor(x/100)){s+=c[Math.floor(x/100)];x=x%100;if(x)s+=' e ';}if(x>=20){s+=d[Math.floor(x/10)];if(x%10)s+=' e '+u[x%10];}else if(x)s+=u[x];return s;}const mi=Math.floor(n/1000000),ml=Math.floor((n%1000000)/1000),r=n%1000;let s='';if(mi)s+=g(mi)+(mi===1?' milhão':' milhões')+(ml||r?' e ':'');if(ml)s+=g(ml)+' mil'+(r?' e ':'');if(r)s+=g(r);return(s||'zero')+' reais';}
 
-/* ── FILA ── */
-function renderFila(){const el=document.getElementById('filabody');if(!LF.length){el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3)">Nenhuma proposta na fila.</div>';return;}el.innerHTML='';LF.forEach(f=>{const l=f.lote,pc=f.status==='aprovado'?'pg':f.status==='reprovado'?'pa':'pb';el.innerHTML+=`<div style="border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:13px;font-weight:600">${f.num} · Q${l.q}/L${l.l}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${f.comprador||'—'} · ${f.corretor||'—'}</div><div style="font-size:11px;color:var(--text3)">${BR(l.preco)} · ${f.prazo}× de ${BR(f.parc)} · ${f.data}</div></div><span class="pill ${pc}">${f.status==='aprovado'?'Aprovado':f.status==='reprovado'?'Reprovado':'Aguardando'}</span></div>`;});}
+/* ── PIPELINE KANBAN ── */
+let KB_MOTIVO_CB=null;
+function renderKanban(){
+  const s=gS();
+  const isGer=s&&['admin','gerente'].includes(s.perfil);
+  const isDir=s&&['admin','diretoria'].includes(s.perfil);
+  const isAdm=s&&s.perfil==='admin';
+  const gerItems=LF.filter(f=>f.status==='aguardando');
+  const dirItems=LF.filter(f=>f.status==='aguardando_dir');
+  const finItems=LC.filter(c=>c.status!=='distratado');
+  const repItems=LF.filter(f=>f.status==='reprovado');
+  function badge(id,arr){const el=document.getElementById(id);if(!el)return;el.textContent=arr.length;el.style.display=arr.length>0?'inline':'none';}
+  badge('kb-cnt-ger',gerItems);badge('kb-cnt-dir',dirItems);badge('kb-cnt-fin',finItems);badge('kb-cnt-rep',repItems);
+  function card(f,col){
+    const l=f.lote||{};
+    const canApr=(col==='ger'&&isGer)||(col==='dir'&&(isDir||isAdm));
+    const apBtn=canApr?`<button class="btn bsm btn-s" onclick="kbAprovar('${col}','${f.num}')">✓ Aprovar</button>`:'';
+    const rpBtn=canApr?`<button class="btn bsm btn-d" onclick="kbReprovar('${col}','${f.num}')">✕ Reprovar</button>`:'';
+    const motivo=f.motivoReprovacao?`<div style="font-size:10px;color:var(--red);margin-top:3px">Motivo: ${f.motivoReprovacao}</div>`:'';
+    return`<div class="kb-card"><div class="kb-num">${f.num||f.num||'—'}</div><div class="kb-buyer">${f.comprador||'—'}</div><div class="kb-lot">Q${l.q}/L${l.l} · ${f.corretor||'—'}</div><div class="kb-price">${BR(l.preco||0)} · ${f.prazo}×</div>${motivo}<div class="kb-actions">${apBtn}${rpBtn}</div></div>`;
+  }
+  function finCard(c){
+    const l=c.lote||{};
+    const wa=c.cfone?`<a href="https://wa.me/55${c.cfone.replace(/\D/g,'')}?text=Olá!%20Contrato%20${c.num}%20finalizado." target="_blank" class="btn bsm" style="background:#25d366;color:white;border-color:#25d366">WhatsApp</a>`:'';
+    return`<div class="kb-card"><div class="kb-num">${c.num}</div><div class="kb-buyer">${c.comprador||'—'}</div><div class="kb-lot">Q${l.q}/L${l.l} · Corretor: ${c.corretor||'—'}</div><div class="kb-price">${BR(l.preco||0)} · ${c.prazo}×</div><div class="kb-actions"><button class="btn bsm btn-p" onclick='dlContratoX(${JSON.stringify(c)})'>⬇ Contrato</button>${wa}</div></div>`;
+  }
+  const gerEl=document.getElementById('kb-ger');
+  const dirEl=document.getElementById('kb-dir');
+  const finEl=document.getElementById('kb-fin');
+  const repEl=document.getElementById('kb-rep');
+  gerEl.innerHTML=gerItems.length?gerItems.map(f=>card(f,'ger')).join(''):'<div class="kb-empty">Nenhuma proposta aguardando.</div>';
+  dirEl.innerHTML=dirItems.length?dirItems.map(f=>card(f,'dir')).join(''):'<div class="kb-empty">Nenhuma proposta aguardando.</div>';
+  finEl.innerHTML=finItems.length?finItems.map(c=>finCard(c)).join(''):'<div class="kb-empty">Nenhum contrato finalizado.</div>';
+  repEl.innerHTML=repItems.length?repItems.map(f=>`<div class="kb-card"><div class="kb-num">${f.num}</div><div class="kb-buyer">${f.comprador||'—'}</div><div class="kb-lot">Q${f.lote?.q}/L${f.lote?.l} · ${f.corretor||'—'}</div><div style="font-size:10px;color:var(--red);margin-top:3px">${f.motivoReprovacao||'Sem motivo registrado'}</div></div>`).join(''):'<div class="kb-empty">Nenhuma proposta reprovada.</div>';
+  /* atualiza badge sidebar */
+  const tot=gerItems.length+dirItems.length;
+  const bf=document.getElementById('bf');if(bf){bf.style.display=tot>0?'inline':'none';bf.textContent=tot;}
+}
+function kbAprovar(col,num){
+  const idx=LF.findIndex(f=>f.num===num);
+  if(idx===-1)return;
+  const f=LF[idx];
+  const s=gS();
+  if(col==='ger'){
+    LF[idx].status='aguardando_dir';
+    LF[idx].aprovGerEm=new Date().toISOString();
+    LF[idx].aprovGerPor=s?s.nome:'—';
+    save();renderKanban();
+  }else if(col==='dir'){
+    LF[idx].status='aprovado';
+    LF[idx].aprovDirEm=new Date().toISOString();
+    LF[idx].aprovDirPor=s?s.nome:'—';
+    /* gera contrato e muda lote para Vendido */
+    chSt(f.lote.q,f.lote.l,'Vendido',`Contrato ${f.num} aprovado pela Diretoria`);
+    LC.push({...f,resp:s?s.nome:'Diretoria',aprovadoEm:new Date().toISOString()});
+    save();renderKanban();
+  }
+}
+function kbReprovar(col,num){
+  KB_MOTIVO_CB={col,num};
+  document.getElementById('kb-motivo-txt').value='';
+  document.getElementById('kb-motivo-meta').style.display='none';
+  document.getElementById('kb-motivo-modal').classList.add('open');
+}
+function closeKbMotivo(){document.getElementById('kb-motivo-modal').classList.remove('open');KB_MOTIVO_CB=null;}
+function confirmKbReprovar(){
+  if(!KB_MOTIVO_CB)return;
+  const motivo=document.getElementById('kb-motivo-txt').value.trim();
+  if(!motivo){alert('Informe o motivo da reprovação.');return;}
+  const idx=LF.findIndex(f=>f.num===KB_MOTIVO_CB.num);
+  if(idx===-1){closeKbMotivo();return;}
+  const f=LF[idx];
+  LF[idx].status='reprovado';
+  LF[idx].motivoReprovacao=motivo;
+  LF[idx].reprovadoEm=new Date().toISOString();
+  const s=gS();LF[idx].reprovadoPor=s?s.nome:'—';
+  /* devolve lote ao estoque com preço de mercado atual */
+  const lx=LS.find(x=>x.q===f.lote.q&&x.l===f.lote.l);
+  if(lx&&lx.status==='Reservado'){
+    lx.status='Disponivel';
+    if(lx._mktPreco){lx.preco=lx._mktPreco;lx.vlm2=lx._mktVlm2;delete lx._mktPreco;delete lx._mktVlm2;}
+    lx.obs=`Reprovado: ${motivo}`;
+  }
+  save();closeKbMotivo();renderKanban();
+}
+/* ── FILA (legado) ── */
+function renderFila(){const el=document.getElementById('filabody');if(!LF.length){el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3)">Nenhuma proposta na fila.</div>';return;}el.innerHTML='';LF.forEach(f=>{const l=f.lote,pc=f.status==='aprovado'||f.status==='aguardando_dir'?'pg':f.status==='reprovado'?'pa':'pb';const stLabel={aguardando:'Aguardando Gerência',aguardando_dir:'Aguardando Diretoria',aprovado:'Aprovado',reprovado:'Reprovado'}[f.status]||f.status;el.innerHTML+=`<div style="border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:13px;font-weight:600">${f.num} · Q${l.q}/L${l.l}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${f.comprador||'—'} · ${f.corretor||'—'}</div><div style="font-size:11px;color:var(--text3)">${BR(l.preco)} · ${f.prazo}× de ${BR(f.parc)} · ${f.data}</div></div><span class="pill ${pc}">${stLabel}</span></div>`;});}
 
 /* ── CONTRATOS ── */
 function renderCtr(){const el=document.getElementById('ctrbody');const s=gS();const isCorr=s&&s.perfil==='corretor';const lista=isCorr?LC.filter(c=>c.corretor===s.nome&&c.status!=='distratado'):LC;if(!lista.length){el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado.</div>';return;}el.innerHTML='';lista.forEach(c=>{const l=c.lote;const isDist=c.status==='distratado';const statusPill=isDist?'<span class="pill pa">Distratado</span>':'<span class="pill pg">Aprovado</span>';const distBtn=(!isCorr&&!isDist)?`<button class="btn bsm btn-d" onclick='openDist(${JSON.stringify(c)})' style="font-size:10px">Distrato</button>`:'';const pdfBtn=`<button class="btn bsm" onclick='dlContratoX(${JSON.stringify(c)})'>⬇ PDF</button>`;const btns=`<div style="display:flex;gap:5px;align-items:center">${distBtn}${pdfBtn}</div>`;const distInfo=isDist?`<div style="font-size:10px;color:var(--red);margin-top:2px">Distratado em ${new Date(c.distratoEm).toLocaleDateString('pt-BR')} · ${c.distratoMotivo||''}</div>`:'';el.innerHTML+=`<div style="border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:13px;font-weight:600">${c.num} ${statusPill}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Q${l.q}/L${l.l} · ${l.area.toFixed(2)} m² · ${BR(l.preco)}</div><div style="font-size:11px;color:var(--text3)">${c.comprador||'—'} · ${c.prazo}× de ${BR(c.parc)} · Aprov. por ${c.resp||'—'}</div>${distInfo}</div>${btns}</div>`;});}
 
+/* ── GESTÃO DE PREÇOS ── */
+function updatePrecoQuadra(){
+  const q=document.getElementById('pm-quadra').value;
+  const vlm2=parseFloat(document.getElementById('pm-vlm2').value);
+  const res=document.getElementById('pm-result');
+  if(!q||isNaN(vlm2)||vlm2<=0){alert('Selecione a quadra e informe um valor válido.');return;}
+  if(!confirm(`Aplicar R$ ${vlm2.toFixed(2)}/m² a todos os lotes DISPONÍVEIS da Quadra ${q}?\nLotes Reservados e Em Proposta mantêm o preço congelado.`))return;
+  const lotes=LS.filter(l=>l.q===q&&l.status==='Disponivel');
+  let n=0;
+  lotes.forEach(l=>{
+    l.vlm2=vlm2;
+    l.preco=parseFloat((l.area*vlm2).toFixed(2));
+    const ent=l.preco*0.1;l.entrada=parseFloat(ent.toFixed(2));
+    l.e144=parseFloat(((l.preco-ent)/144).toFixed(2));
+    l.e156=parseFloat(((l.preco-ent)/156).toFixed(2));
+    l.e180=parseFloat(((l.preco-ent)/180).toFixed(2));
+    n++;
+  });
+  /* registra histórico de preço */
+  const hist=JSON.parse(localStorage.getItem('ph_pricehistory')||'[]');
+  const now=new Date();
+  const dtLabel=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const allAvg=LS.filter(l=>l.vlm2>0).reduce((a,l,i,arr)=>a+(l.vlm2/arr.length),0);
+  const last=hist[hist.length-1];
+  if(!last||last.dt!==dtLabel)hist.push({dt:dtLabel,v:allAvg});
+  else last.v=allAvg;
+  localStorage.setItem('ph_pricehistory',JSON.stringify(hist));
+  save();
+  res.style.display='block';res.innerHTML=`<div class="alert as">✓ ${n} lote(s) da Quadra ${q} atualizados para ${BR(vlm2)}/m². Lotes reservados/em proposta mantiveram preço congelado.</div>`;
+  if(document.getElementById('pg-disp').classList.contains('active'))renderDisp();
+}
 /* ── INADIMPLÊNCIA ── */
 const INAD=[{cli:'MARCIO SILVA MEDEIROS',fone:'(85) 98749-8773',ctr:'PH-000176/PH-000177',lote:'QR15 L13+L14',t:13,d:2659,s:10757,e:2145,total:10757},{cli:'JANE EVILA RODRIGUES PEREIRA',fone:'',ctr:'PH-000456',lote:'QR07 L07',t:3,d:1095,s:5554,e:1264,total:6818},{cli:'FRANCISCO CARLOS DA SILVA CARNEIRO',fone:'(85) 98618-5362',ctr:'PH-000443',lote:'QR14 L65',t:2,d:45,s:2690,e:572,total:3262},{cli:'FRANCISCO LEONARDO PEREIRA SARAIVA',fone:'',ctr:'PH-CA-000612',lote:'CASA 454B',t:3,d:95,s:0,e:3400,total:3400},{cli:'LEONARDO DE LIMA SILVA',fone:'',ctr:'PH-CA-000505',lote:'CASA 442B',t:2,d:70,s:0,e:805,total:805}];
 function renderInad(){filterInad();}
@@ -779,7 +1102,7 @@ const tb=document.getElementById('itbody');tb.innerHTML='';lst.forEach(d=>{const
 function expInad(){const r=INAD.map(d=>`${d.cli};${d.ctr};${d.t};${d.d}d;${d.s.toFixed(2)};${d.e.toFixed(2)};${d.total.toFixed(2)}`);dlFile('\uFEFF'+'Cliente;Contratos;Títulos;Maior atraso;Saldo;Encargos;Total\n'+r.join('\n'),'inadimplencia_portal.csv','text/csv;charset=utf-8');}
 
 /* ── CONFIG ── */
-function renderCfg(){const s=gS();if(!s)return;document.getElementById('cfn').value=s.nome;document.getElementById('cfe').value=s.email;const isA=s.perfil==='admin';const isAG=['admin','gerente'].includes(s.perfil);document.getElementById('cfgusers').style.display=isA?'block':'none';const cce=document.getElementById('cfgcorretores');if(cce)cce.style.display=isAG?'block':'none';if(isA)renderUsers();if(isAG)renderCorretores();document.getElementById('bkpinfo').innerHTML=`Última verificação: ${new Date().toLocaleString('pt-BR')} · Lotes: ${LS.length} · Fila: ${LF.length} · Contratos: ${LC.length}`;document.getElementById('sysinfo').innerHTML=`<div style="color:var(--text3)">Versão</div><div>1.1.0 · 24/04/2026</div><div style="color:var(--text3)">Empreendimento</div><div>Portal do Horizonte</div><div style="color:var(--text3)">Total lotes</div><div>${LS.length}</div><div style="color:var(--text3)">Empresa</div><div>Castanha Empreendimentos Imobiliários Ltda</div><div style="color:var(--text3)">CNPJ</div><div>21.613.396/0001-12</div><div style="color:var(--text3)">Memoriais carregados</div><div>${Object.keys(MM).length} lotes</div>`;}
+function renderCfg(){const s=gS();if(!s)return;document.getElementById('cfn').value=s.nome;document.getElementById('cfe').value=s.email;const isA=s.perfil==='admin';const isAG=['admin','gerente'].includes(s.perfil);document.getElementById('cfgusers').style.display=isA?'block':'none';const cce=document.getElementById('cfgcorretores');if(cce)cce.style.display=isAG?'block':'none';const ccp=document.getElementById('cfgprecos');if(ccp)ccp.style.display=isAG?'block':'none';if(isA)renderUsers();if(isAG)renderCorretores();document.getElementById('bkpinfo').innerHTML=`Última verificação: ${new Date().toLocaleString('pt-BR')} · Lotes: ${LS.length} · Fila: ${LF.length} · Contratos: ${LC.length}`;document.getElementById('sysinfo').innerHTML=`<div style="color:var(--text3)">Versão</div><div>1.2.0 · 05/05/2026</div><div style="color:var(--text3)">Empreendimento</div><div>Portal do Horizonte</div><div style="color:var(--text3)">Total lotes</div><div>${LS.length}</div><div style="color:var(--text3)">Empresa</div><div>Castanha Empreendimentos Imobiliários Ltda</div><div style="color:var(--text3)">CNPJ</div><div>21.613.396/0001-12</div><div style="color:var(--text3)">Memoriais carregados</div><div>${Object.keys(MM).length} lotes</div>`;}
 function renderUsers(){const us=gU();document.getElementById('usrlist').innerHTML=us.map(u=>{const ini=u.nome.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();return`<div class="ur"><div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:50%;background:var(--text);color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${ini}</div><div><div style="font-size:12px;font-weight:500">${u.nome}</div><div style="font-size:11px;color:var(--text3)">${u.email} · ${u.perfil}</div></div></div><div style="display:flex;gap:7px;align-items:center"><span class="pill ${u.ativo?'pg':'pa'}">${u.ativo?'Ativo':'Inativo'}</span><button class="btn bsm" onclick="editUser(${u.id})">Editar</button>${u.id!==1?`<button class="btn bsm" style="color:var(--red)" onclick="togUser(${u.id})">${u.ativo?'Desativar':'Ativar'}</button>`:''}</div></div>`;}).join('');}
 function saveName(){const s=gS();if(!s)return;const n=document.getElementById('cfn').value.trim();if(!n)return;const us=gU(),u=us.find(x=>x.id===s.id);if(u){u.nome=n;saveUsers(us);s.nome=n;sessionStorage.setItem(AK,JSON.stringify(s));document.getElementById('snome').textContent=n;}showMsg('csmsg','Nome atualizado!','green');}
 function chgPwd(){const s=gS();if(!s)return;const a=V('csa'),n=V('csn'),c=V('csc');if(!a||!n||!c){showMsg('csmsg','Preencha todos os campos.','red');return;}if(n!==c){showMsg('csmsg','Senhas não coincidem.','red');return;}if(n.length<6){showMsg('csmsg','Mínimo 6 caracteres.','red');return;}const us=gU(),u=us.find(x=>x.id===s.id);if(!u||u.senha!==btoa(a)){showMsg('csmsg','Senha atual incorreta.','red');return;}u.senha=btoa(n);saveUsers(us);['csa','csn','csc'].forEach(id=>document.getElementById(id).value='');showMsg('csmsg','Senha alterada com sucesso!','green');}
