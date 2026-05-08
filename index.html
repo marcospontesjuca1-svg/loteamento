@@ -515,9 +515,21 @@ tr:hover td{background:var(--bg)}
     <div id="mres-warn" class="alert aw" style="display:none;margin-bottom:9px;font-size:11px"></div>
     <div class="res-opts">
       <button class="res-opt-btn res-primary" id="btn-nova-proposta" onclick="irParaPropostaDoModal()">✦ Nova Proposta</button>
-      <button class="res-opt-btn res-amber" id="btn-reservar-lote" onclick="reservarLoteModal()">⊙ Reservar por 48h</button>
+      <button class="res-opt-btn res-amber" id="btn-reservar-lote" onclick="reservarLoteModal()">⊙ Reservar por 72h</button>
       <button class="res-opt-btn" onclick="closeReservaModal()">Cancelar</button>
     </div>
+  </div>
+</div>
+<div class="mo" id="modal-lote-reservado">
+  <div class="mb" style="width:420px">
+    <div class="mt" id="mlr-tit">Lote Reservado</div>
+    <div id="mlr-info" style="font-size:12px;color:var(--text3);margin-bottom:4px"></div>
+    <div id="mlr-preco" style="font-size:18px;font-weight:700;color:var(--blue);margin-bottom:4px"></div>
+    <div id="mlr-area" style="font-size:12px;color:var(--text3);margin-bottom:4px"></div>
+    <div id="mlr-reservante" style="font-size:12px;color:var(--amber,#f59e0b);margin-bottom:4px;font-weight:600"></div>
+    <div id="mlr-expira" style="font-size:11px;color:var(--text3);margin-bottom:11px"></div>
+    <div id="mlr-opts" class="res-opts"></div>
+    <button class="res-opt-btn" onclick="closeLoteReservadoModal()" style="margin-top:6px">Fechar</button>
   </div>
 </div>
 
@@ -674,10 +686,9 @@ function openReservaModal(l){
   const warn=document.getElementById('mres-warn');
   const s=gS();
   if(s&&s.perfil==='corretor'){
-    const hoje24=Date.now()-86400000;
-    const resHoje=(JSON.parse(localStorage.getItem('ph_reservas_corr')||'{}')||{})[s.nome]||[];
-    const recent=resHoje.filter(ts=>ts>hoje24).length;
-    if(recent>=3){warn.style.display='block';warn.textContent=`Limite de 3 reservas em 24h atingido (${recent} ativas). Aguarde para reservar.`;document.getElementById('btn-reservar-lote').disabled=true;}
+    const ativas=JSON.parse(localStorage.getItem('ph_reservas_ativas')||'[]').filter(rv=>rv.corretor===s.nome&&rv.exp>Date.now());
+    const count=ativas.length;
+    if(count>=3){warn.style.display='block';warn.textContent=`Limite de 3 reservas simultâneas atingido (${count} ativas). Libere uma reserva para continuar.`;document.getElementById('btn-reservar-lote').disabled=true;}
     else{warn.style.display='none';document.getElementById('btn-reservar-lote').disabled=false;}
   }else{warn.style.display='none';document.getElementById('btn-reservar-lote').disabled=false;}
   document.getElementById('modal-reserva').classList.add('open');
@@ -685,11 +696,14 @@ function openReservaModal(l){
 function closeReservaModal(){document.getElementById('modal-reserva').classList.remove('open');MRES_LOTE=null;}
 function irParaPropostaDoModal(){
   if(!MRES_LOTE)return;
+  const lote=MRES_LOTE;
   closeReservaModal();
-  LS2=MRES_LOTE;
-  PS=1;
+  if(typeof closeLoteReservadoModal==='function')closeLoteReservadoModal();
+  LS2=lote;
+  resetProp();
+  LS2=lote;
   sp('prop');
-  setTimeout(()=>{filterLP();document.getElementById('lsel').style.display='block';document.getElementById('lsel').innerHTML=`<div class="alert as">✓ Q${LS2.q}/L${LS2.l} pré-selecionado — ${BR(LS2.preco)}</div>`;document.getElementById('btnp1').disabled=false;},100);
+  setTimeout(()=>{PS=2;showPP(2);},80);
 }
 function reservarLoteModal(){
   if(!MRES_LOTE)return;
@@ -697,22 +711,16 @@ function reservarLoteModal(){
   if(!s){alert('Faça login para reservar.');return;}
   const l=MRES_LOTE;
   const agora=Date.now();
-  const exp=agora+172800000; /* 48h */
-  /* registra reserva no controle por corretor */
-  const ctrl=JSON.parse(localStorage.getItem('ph_reservas_corr')||'{}');
-  if(!ctrl[s.nome])ctrl[s.nome]=[];
-  ctrl[s.nome].push(agora);
-  ctrl[s.nome]=ctrl[s.nome].filter(ts=>ts>agora-86400000);
-  localStorage.setItem('ph_reservas_corr',JSON.stringify(ctrl));
+  const exp=agora+259200000; /* 72h */
   const obs=`Reservado por ${s.nome} em ${new Date().toLocaleString('pt-BR')} — expira ${new Date(exp).toLocaleString('pt-BR')}`;
   chSt(l.q,l.l,'Reservado',obs);
   /* agenda expiração */
-  const reservas=JSON.parse(localStorage.getItem('ph_reservas_ativas')||'[]');
-  reservas.push({q:l.q,l:l.l,exp,corretor:s.nome});
+  const reservas=JSON.parse(localStorage.getItem('ph_reservas_ativas')||'[]').filter(rv=>!(rv.q===l.q&&rv.l===l.l));
+  reservas.push({q:l.q,l:l.l,exp,corretor:s.nome,nome:s.nome});
   localStorage.setItem('ph_reservas_ativas',JSON.stringify(reservas));
   closeReservaModal();
   filterDisp();
-  alert(`✓ Lote Q${l.q}/L${l.l} reservado por 48 horas!`);
+  alert(`✓ Lote Q${l.q}/L${l.l} reservado por 72 horas!`);
 }
 function checkReservasExpiradas(){
   const reservas=JSON.parse(localStorage.getItem('ph_reservas_ativas')||'[]');
@@ -727,6 +735,46 @@ function checkReservasExpiradas(){
   });
   localStorage.setItem('ph_reservas_ativas',JSON.stringify(ativas));
   if(changed)save();
+}
+let MLRV_LOTE=null;
+function openLoteReservadoModal(l){
+  MLRV_LOTE=l;
+  const s=gS();
+  const reservas=JSON.parse(localStorage.getItem('ph_reservas_ativas')||'[]');
+  const rv=reservas.find(r=>r.q===l.q&&r.l===l.l);
+  document.getElementById('mlr-tit').textContent=`Q${l.q} / Lote ${l.l} — Reservado`;
+  document.getElementById('mlr-info').textContent=`${l.tipo}`;
+  document.getElementById('mlr-preco').textContent=BR(l.preco);
+  document.getElementById('mlr-area').textContent=`${l.area.toFixed(2)} m² · ${BR(l.vlm2)}/m²`;
+  document.getElementById('mlr-reservante').textContent=rv?`Reservado por: ${rv.nome||rv.corretor}`:'Reservado';
+  document.getElementById('mlr-expira').textContent=rv?`Expira em: ${new Date(rv.exp).toLocaleString('pt-BR')}`:'';
+  const opts=document.getElementById('mlr-opts');
+  opts.innerHTML='';
+  const isOwner=s&&rv&&(rv.corretor===s.nome||rv.nome===s.nome);
+  const isAdmin=s&&['admin','diretoria','gerente'].includes(s.perfil);
+  if(isOwner||isAdmin){
+    const btnProp=document.createElement('button');
+    btnProp.className='res-opt-btn res-primary';
+    btnProp.textContent='✦ Nova Proposta';
+    btnProp.onclick=()=>{MRES_LOTE=l;irParaPropostaDoModal();};
+    opts.appendChild(btnProp);
+    const btnLib=document.createElement('button');
+    btnLib.className='res-opt-btn';
+    btnLib.style.cssText='border-color:var(--green);color:var(--green)';
+    btnLib.textContent='◎ Liberar Lote';
+    btnLib.onclick=()=>liberarLote(l);
+    opts.appendChild(btnLib);
+  }
+  document.getElementById('modal-lote-reservado').classList.add('open');
+}
+function closeLoteReservadoModal(){document.getElementById('modal-lote-reservado').classList.remove('open');MLRV_LOTE=null;}
+function liberarLote(l){
+  if(!confirm(`Liberar lote Q${l.q}/L${l.l} e retornar para Disponível?`))return;
+  chSt(l.q,l.l,'Disponivel','Reserva liberada manualmente');
+  const reservas=JSON.parse(localStorage.getItem('ph_reservas_ativas')||'[]').filter(rv=>!(rv.q===l.q&&rv.l===l.l));
+  localStorage.setItem('ph_reservas_ativas',JSON.stringify(reservas));
+  closeLoteReservadoModal();
+  renderMapa();
 }
 function renderMapa(){
   checkReservasExpiradas();
@@ -745,15 +793,9 @@ function renderMapa(){
       sq.addEventListener('mousemove',e=>{const t=document.getElementById('tip');t.style.left=(e.clientX+14)+'px';t.style.top=(e.clientY-10)+'px';});
       sq.addEventListener('mouseleave',()=>{document.getElementById('tip').style.opacity='0';});
       sq.addEventListener('click',()=>{
-        if(l.status==='Disponivel'){
-          LS2=l;resetProp();LS2=l;
-          sp('prop');
-          setTimeout(()=>{
-            document.getElementById('lsel').style.display='block';
-            document.getElementById('lsel').innerHTML=`<div class="alert as">✓ Q${l.q}/L${l.l} selecionado — ${BR(l.preco)}</div>`;
-            PS=2;showPP(2);
-          },80);
-        }else{openM(l);}
+        if(l.status==='Disponivel'){openReservaModal(l);}
+        else if(l.status==='Reservado'){openLoteReservadoModal(l);}
+        else{openM(l);}
       });
       wr.appendChild(sq);
     });
