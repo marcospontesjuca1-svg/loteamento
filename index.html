@@ -738,7 +738,7 @@ function renderMapa(){
     const wr=document.createElement('div');wr.className='mls';
     LS.filter(l=>l.q===q).sort((a,b)=>a.l-b.l).forEach(l=>{
       const _s=gS(),_isCorr=_s&&_s.perfil==='corretor';
-      if(_isCorr&&(l.status==='Vendido'||l.status==='Bloqueado')){const sq2=document.createElement('div');sq2.className='lsq Bloqueado';sq2.style.opacity='0.2';sq2.style.cursor='default';wr.appendChild(sq2);continue;}
+      if(_isCorr&&(l.status==='Vendido'||l.status==='Bloqueado')){const sq2=document.createElement('div');sq2.className='lsq Bloqueado';sq2.style.opacity='0.2';sq2.style.cursor='default';wr.appendChild(sq2);return;}
       const sq=document.createElement('div');sq.className='lsq '+l.status;
       sq.title=`Q${q}/L${l.l} · ${l.area.toFixed(1)}m² · ${BR(l.preco)} · ${l.status}`;
       sq.addEventListener('mouseenter',e=>{const t=document.getElementById('tip');t.innerHTML=`<b>Q${q}/L${l.l}</b><br>${l.tipo} · ${l.area.toFixed(1)} m²<br><b style="color:#3b70d4">${BR(l.preco)}</b><br><span style="opacity:.7">${BR(l.vlm2)}/m²</span><br><b>${l.status}</b>`;t.style.opacity='1';});
