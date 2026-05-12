@@ -722,8 +722,11 @@ function reservarLoteModal(){
   const agora=Date.now();
   const exp=agora+259200000; /* 72h */
   const obs=`Reservado por ${s.nome} em ${new Date().toLocaleString('pt-BR')} — expira ${new Date(exp).toLocaleString('pt-BR')}`;
+  /* persiste no objeto do lote (Firestore) para funcionar em qualquer dispositivo */
+  const lx=LS.find(x=>x.q===l.q&&x.l===l.l);
+  if(lx){lx.reservadoPor=s.nome;lx.reservadoExp=exp;}
   chSt(l.q,l.l,'Reservado',obs);
-  /* agenda expiração */
+  /* também salva no localStorage como cache rápido */
   const reservas=JSON.parse(localStorage.getItem('ph_reservas_ativas')||'[]').filter(rv=>!(rv.q===l.q&&rv.l===l.l));
   reservas.push({q:l.q,l:l.l,exp,corretor:s.nome,nome:s.nome});
   localStorage.setItem('ph_reservas_ativas',JSON.stringify(reservas));
@@ -732,13 +735,22 @@ function reservarLoteModal(){
   alert(`✓ Lote Q${l.q}/L${l.l} reservado por 72 horas!`);
 }
 function checkReservasExpiradas(){
-  const reservas=JSON.parse(localStorage.getItem('ph_reservas_ativas')||'[]');
   const agora=Date.now();
   let changed=false;
+  /* verifica expiração pelo campo reservadoExp no objeto do lote (Firestore) */
+  LS.forEach(lx=>{
+    if(lx.status==='Reservado'&&lx.reservadoExp&&lx.reservadoExp<=agora){
+      lx.status='Disponivel';lx.obs='Reserva expirada automaticamente';
+      delete lx.reservadoPor;delete lx.reservadoExp;
+      changed=true;
+    }
+  });
+  /* também limpa localStorage */
+  const reservas=JSON.parse(localStorage.getItem('ph_reservas_ativas')||'[]');
   const ativas=reservas.filter(rv=>{
     if(rv.exp<=agora){
       const lx=LS.find(x=>x.q===rv.q&&x.l===rv.l);
-      if(lx&&lx.status==='Reservado'){lx.status='Disponivel';lx.obs='Reserva expirada automaticamente';changed=true;}
+      if(lx&&lx.status==='Reservado'){lx.status='Disponivel';lx.obs='Reserva expirada automaticamente';delete lx.reservadoPor;delete lx.reservadoExp;changed=true;}
       return false;
     }return true;
   });
@@ -759,7 +771,11 @@ function openLoteReservadoModal(l){
   document.getElementById('mlr-expira').textContent=rv?`Expira em: ${new Date(rv.exp).toLocaleString('pt-BR')}`:'';
   const opts=document.getElementById('mlr-opts');
   opts.innerHTML='';
-  const isOwner=s&&rv&&(rv.corretor===s.nome||rv.nome===s.nome);
+  /* verifica propriedade pelo campo do lote (Firestore) OU pelo localStorage */
+  const isOwner=s&&(
+    (l.reservadoPor&&l.reservadoPor===s.nome)||
+    (rv&&(rv.corretor===s.nome||rv.nome===s.nome))
+  );
   const isAdmin=s&&['admin','diretoria','gerente'].includes(s.perfil);
   if(isOwner||isAdmin){
     const btnProp=document.createElement('button');
@@ -779,6 +795,8 @@ function openLoteReservadoModal(l){
 function closeLoteReservadoModal(){document.getElementById('modal-lote-reservado').classList.remove('open');MLRV_LOTE=null;}
 function liberarLote(l){
   if(!confirm(`Liberar lote Q${l.q}/L${l.l} e retornar para Disponível?`))return;
+  const lx=LS.find(x=>x.q===l.q&&x.l===l.l);
+  if(lx){delete lx.reservadoPor;delete lx.reservadoExp;}
   chSt(l.q,l.l,'Disponivel','Reserva liberada manualmente');
   const reservas=JSON.parse(localStorage.getItem('ph_reservas_ativas')||'[]').filter(rv=>!(rv.q===l.q&&rv.l===l.l));
   localStorage.setItem('ph_reservas_ativas',JSON.stringify(reservas));
@@ -848,7 +866,10 @@ function submitProp(){
   const l=PA.lote;
   /* congela preço do lote no momento da proposta */
   const lx=LS.find(x=>x.q===l.q&&x.l===l.l);
-  if(lx){lx._mktPreco=lx.preco;lx._mktVlm2=lx.vlm2;}
+  if(lx){lx._mktPreco=lx.preco;lx._mktVlm2=lx.vlm2;delete lx.reservadoPor;delete lx.reservadoExp;}
+  /* remove reserva temporária do localStorage — agora gerenciada pela proposta */
+  const _rv2=JSON.parse(localStorage.getItem('ph_reservas_ativas')||'[]').filter(rv=>!(rv.q===l.q&&rv.l===l.l));
+  localStorage.setItem('ph_reservas_ativas',JSON.stringify(_rv2));
   chSt(l.q,l.l,'Reservado',`Proposta ${PA.num}`);
   LF.push({...PA,status:'aguardando',ts:new Date().toISOString()});
   save();
@@ -861,7 +882,7 @@ function submitProp(){
   const _su=gS();const bdecEl=document.getElementById('bdec');if(bdecEl)bdecEl.style.display=_su&&['admin','gerente','diretoria'].includes(_su.perfil)?'block':'none';
 }
 function approveProp(){const rs=V('ares')||'Gerência',l=PA.lote;chSt(l.q,l.l,'Vendido',`Contrato ${PA.num} aprovado`);const idx=LF.findIndex(f=>f.num===PA.num);if(idx>-1)LF[idx].status='aprovado';LC.push({...PA,resp:rs,aprovadoEm:new Date().toISOString()});save();document.getElementById('bf').textContent=LF.filter(f=>f.status==='aguardando').length||'';document.getElementById('tl2').innerHTML=`<div class="tli"><div class="tld" style="background:var(--green)"></div><div class="tll"></div><div><div class="tlt">Aprovado por ${rs}</div><div class="tls">${fD(V('adt'))}</div></div></div><div class="tli"><div class="tld" style="background:var(--green)"></div><div class="tll"></div><div><div class="tlt">Lote Q${l.q}/L${l.l} → Vendido</div><div class="tls">Mapa atualizado automaticamente</div></div></div><div class="tli"><div class="tld" style="background:var(--green)"></div><div><div class="tlt">Contrato ${PA.num} gerado</div></div></div>`;PS=6;showPP(6);}
-function reproveProp(){const l=PA.lote;chSt(l.q,l.l,'Disponivel',`Proposta ${PA.num} reprovada`);const idx=LF.findIndex(f=>f.num===PA.num);if(idx>-1){LF[idx].status='reprovado';LF[idx].reprovadoEm=new Date().toISOString();}save();document.getElementById('ap5').className='alert ad';document.getElementById('ap5').textContent='✕ Proposta reprovada. Lote devolvido ao estoque.';document.getElementById('bdec').style.display='none';}
+function reproveProp(){const l=PA.lote;const _lxr=LS.find(x=>x.q===l.q&&x.l===l.l);if(_lxr){delete _lxr.reservadoPor;delete _lxr.reservadoExp;}chSt(l.q,l.l,'Disponivel',`Proposta ${PA.num} reprovada`);const idx=LF.findIndex(f=>f.num===PA.num);if(idx>-1){LF[idx].status='reprovado';LF[idx].reprovadoEm=new Date().toISOString();}save();document.getElementById('ap5').className='alert ad';document.getElementById('ap5').textContent='✕ Proposta reprovada. Lote devolvido ao estoque.';document.getElementById('bdec').style.display='none';}
 function resetProp(){LS2=null;PR=156;PA={};PA_DOCS=[];PS=1;showPP(1);filterLP();populateCorrSel();document.getElementById('btnp1').disabled=true;document.getElementById('lsel').style.display='none';const dl=document.getElementById('docs-list');if(dl)dl.innerHTML='';const di=document.getElementById('docs-input');if(di)di.value='';document.getElementById('conjugue-section').style.display='none';}
 
 /* ── GERAÇÃO DO CONTRATO NO FORMATO CONTRATO_PADRÃO ── */
