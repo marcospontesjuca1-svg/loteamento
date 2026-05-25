@@ -214,6 +214,8 @@ tr:hover td{background:var(--bg)}
 .res-opt-btn.res-primary:hover{opacity:.88}
 .res-opt-btn.res-amber{background:var(--amber);color:white;border-color:var(--amber)}
 .res-opt-btn.res-amber:hover{opacity:.88}
+.res-opt-btn.res-blue{background:var(--blue);color:white;border-color:var(--blue)}
+.res-opt-btn.res-blue:hover{opacity:.88}
 /* ── KPI REVENUE ── */
 .kgrid2{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
 .kpi.kpi-rev{border-left:3px solid var(--green)}
@@ -607,10 +609,59 @@ tr:hover td{background:var(--bg)}
     <div class="res-opts">
       <button class="res-opt-btn res-primary" id="btn-nova-proposta" onclick="irParaPropostaDoModal()">✦ Nova Proposta</button>
       <button class="res-opt-btn res-amber" id="btn-reservar-lote" onclick="reservarLoteModal()">⊙ Reservar por 72h</button>
+      <button class="res-opt-btn res-blue" onclick="abrirSimulacao()">◎ Simulação de Compra</button>
       <button class="res-opt-btn" onclick="closeReservaModal()">Cancelar</button>
     </div>
   </div>
 </div>
+
+<!-- MODAL SIMULAÇÃO -->
+<div class="mo" id="modal-simulacao">
+  <div class="mb" style="width:500px">
+    <div class="mt">◎ Simulação de Compra</div>
+    <div id="sim-lote-info" style="font-size:12px;color:var(--text3);margin-bottom:2px"></div>
+    <div id="sim-lote-preco" style="font-size:18px;font-weight:700;color:var(--blue);margin-bottom:14px"></div>
+    <div class="fg2">
+      <div class="fi">
+        <label>Entrada (R$)</label>
+        <input type="number" id="sim-entrada" min="0" step="100" placeholder="0,00" oninput="calcSimulacao()">
+      </div>
+      <div class="fi">
+        <label>Data do 1º Pagamento</label>
+        <input type="date" id="sim-data1" oninput="calcSimulacao()">
+      </div>
+    </div>
+    <div class="fg2">
+      <div class="fi">
+        <label>Nº de Parcelas</label>
+        <input type="number" id="sim-parcelas" min="1" max="240" placeholder="60" oninput="calcSimulacao()">
+      </div>
+      <div class="fi">
+        <label>Taxa de Juros (% a.m.)</label>
+        <input type="number" id="sim-juros" min="0" step="0.01" placeholder="0.00" oninput="calcSimulacao()">
+      </div>
+    </div>
+    <div id="sim-resultado" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:13px 15px;margin-bottom:13px">
+      <table class="ftbl" style="width:100%;margin-bottom:0">
+        <tr><td style="color:var(--text3)">Valor do Lote</td><td id="sr-total"></td></tr>
+        <tr><td style="color:var(--text3)">Entrada</td><td id="sr-entrada"></td></tr>
+        <tr><td style="color:var(--text3)">Saldo a Financiar</td><td id="sr-saldo"></td></tr>
+        <tr><td style="color:var(--text3)">Nº de Parcelas</td><td id="sr-nparc"></td></tr>
+        <tr><td style="color:var(--text3)">Taxa de Juros</td><td id="sr-taxa"></td></tr>
+        <tr><td style="color:var(--text3);font-size:14px;font-weight:600">Valor da Parcela</td><td id="sr-parcela" style="color:var(--green);font-size:16px"></td></tr>
+        <tr><td style="color:var(--text3)">1º Pagamento</td><td id="sr-data1"></td></tr>
+        <tr><td style="color:var(--text3)">Último Pagamento</td><td id="sr-dataend"></td></tr>
+        <tr><td style="color:var(--text3)">Total a Pagar</td><td id="sr-totalpago"></td></tr>
+      </table>
+    </div>
+    <div id="sim-aviso" style="display:none;color:var(--amber);font-size:11px;margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeSimulacao()">Fechar</button>
+      <button class="btn btn-p" id="btn-imprimir-sim" onclick="imprimirSimulacao()" style="display:none">⎙ Imprimir</button>
+    </div>
+  </div>
+</div>
+
 <div class="mo" id="modal-lote-reservado">
   <div class="mb" style="width:420px">
     <div class="mt" id="mlr-tit">Lote Reservado</div>
@@ -802,6 +853,145 @@ function openReservaModal(l){
   document.getElementById('modal-reserva').classList.add('open');
 }
 function closeReservaModal(){document.getElementById('modal-reserva').classList.remove('open');MRES_LOTE=null;}
+
+function abrirSimulacao(){
+  if(!MRES_LOTE)return;
+  const l=MRES_LOTE;
+  closeReservaModal();
+  document.getElementById('sim-lote-info').textContent=`Quadra ${l.q} / Lote ${l.l} · ${l.tipo} · ${l.area.toFixed(2)} m²`;
+  document.getElementById('sim-lote-preco').textContent=BR(l.preco);
+  document.getElementById('sim-entrada').value='';
+  document.getElementById('sim-parcelas').value='60';
+  document.getElementById('sim-juros').value='0';
+  const hoje=new Date();hoje.setMonth(hoje.getMonth()+1);hoje.setDate(1);
+  document.getElementById('sim-data1').value=hoje.toISOString().slice(0,10);
+  document.getElementById('sim-resultado').style.display='none';
+  document.getElementById('sim-aviso').style.display='none';
+  document.getElementById('btn-imprimir-sim').style.display='none';
+  document.getElementById('modal-simulacao').classList.add('open');
+  calcSimulacao();
+}
+function closeSimulacao(){document.getElementById('modal-simulacao').classList.remove('open');}
+
+function calcSimulacao(){
+  if(!MRES_LOTE)return;
+  const total=MRES_LOTE.preco||0;
+  const entrada=parseFloat(document.getElementById('sim-entrada').value)||0;
+  const nParcelas=parseInt(document.getElementById('sim-parcelas').value)||0;
+  const taxaMes=parseFloat(document.getElementById('sim-juros').value)||0;
+  const data1=document.getElementById('sim-data1').value;
+  const aviso=document.getElementById('sim-aviso');
+  const res=document.getElementById('sim-resultado');
+  if(entrada<0||entrada>total){aviso.textContent='A entrada não pode ser maior que o valor do lote.';aviso.style.display='block';res.style.display='none';document.getElementById('btn-imprimir-sim').style.display='none';return;}
+  if(nParcelas<1){aviso.style.display='none';res.style.display='none';document.getElementById('btn-imprimir-sim').style.display='none';return;}
+  aviso.style.display='none';
+  const saldo=total-entrada;
+  let valorParcela;
+  if(taxaMes>0){
+    const i=taxaMes/100;
+    valorParcela=saldo*(i*Math.pow(1+i,nParcelas))/(Math.pow(1+i,nParcelas)-1);
+  }else{
+    valorParcela=saldo/nParcelas;
+  }
+  const totalPago=entrada+(valorParcela*nParcelas);
+  let dataFim='';
+  if(data1){
+    const d=new Date(data1+'T12:00:00');
+    d.setMonth(d.getMonth()+(nParcelas-1));
+    dataFim=d.toLocaleDateString('pt-BR');
+  }
+  document.getElementById('sr-total').textContent=BR(total);
+  document.getElementById('sr-entrada').textContent=BR(entrada);
+  document.getElementById('sr-saldo').textContent=BR(saldo);
+  document.getElementById('sr-nparc').textContent=nParcelas+'x';
+  document.getElementById('sr-taxa').textContent=taxaMes>0?taxaMes.toFixed(2)+'% a.m.':'Sem juros';
+  document.getElementById('sr-parcela').textContent=BR(valorParcela);
+  document.getElementById('sr-data1').textContent=data1?new Date(data1+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+  document.getElementById('sr-dataend').textContent=dataFim||'—';
+  document.getElementById('sr-totalpago').textContent=BR(totalPago);
+  res.style.display='block';
+  document.getElementById('btn-imprimir-sim').style.display='inline-flex';
+}
+
+function imprimirSimulacao(){
+  if(!MRES_LOTE)return;
+  const l=MRES_LOTE;
+  const entrada=parseFloat(document.getElementById('sim-entrada').value)||0;
+  const nParcelas=parseInt(document.getElementById('sim-parcelas').value)||0;
+  const taxaMes=parseFloat(document.getElementById('sim-juros').value)||0;
+  const data1=document.getElementById('sim-data1').value;
+  const saldo=l.preco-entrada;
+  let valorParcela;
+  if(taxaMes>0){const i=taxaMes/100;valorParcela=saldo*(i*Math.pow(1+i,nParcelas))/(Math.pow(1+i,nParcelas)-1);}
+  else{valorParcela=saldo/nParcelas;}
+  const totalPago=entrada+(valorParcela*nParcelas);
+  let dataFim='';
+  if(data1){const d=new Date(data1+'T12:00:00');d.setMonth(d.getMonth()+(nParcelas-1));dataFim=d.toLocaleDateString('pt-BR');}
+  const data1Fmt=data1?new Date(data1+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+  const hoje=new Date().toLocaleDateString('pt-BR');
+  const w=window.open('','_blank','width=800,height=700');
+  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Simulação — Q${l.q}/L${l.l}</title>
+<style>
+@page{size:A4;margin:2cm 2cm}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11pt;color:#111;background:#fff;padding:20mm 0}
+.noprint{background:#f0f0f0;padding:10px;text-align:center;margin-bottom:18px;border-radius:4px}
+@media print{.noprint{display:none}}
+.cab{text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:18px}
+.cab .nome{font-size:16pt;font-weight:bold;letter-spacing:1px;text-transform:uppercase}
+.cab .sub{font-size:8.5pt;color:#555;margin-top:3px}
+.titulo{font-size:13pt;font-weight:bold;text-align:center;text-transform:uppercase;letter-spacing:.05em;margin-bottom:16px;color:#1a4fa0}
+.bloco{border:1px solid #ccc;border-radius:4px;padding:12px 16px;margin-bottom:14px}
+.bloco-tit{font-size:9pt;font-weight:bold;text-transform:uppercase;letter-spacing:.06em;color:#555;margin-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:10.5pt}
+td{padding:5px 4px;border-bottom:1px solid #e8e8e8}
+td:last-child{text-align:right;font-weight:600}
+.destaque td{font-size:13pt;font-weight:bold;color:#1a7a50;border-top:2px solid #1a7a50;border-bottom:none;padding-top:8px}
+.rodape{text-align:center;font-size:8pt;color:#777;border-top:1px solid #ccc;padding-top:8px;margin-top:20px}
+.aviso{font-size:8pt;color:#777;text-align:center;margin-top:10px;font-style:italic}
+.ass-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin:30px 0 10px}
+.ass-item{text-align:center}
+.ass-ln{border-top:1px solid #111;margin-top:36px;padding-top:5px;font-size:9pt;color:#444}
+</style></head><body>
+<div class="noprint"><button onclick="window.print()" style="padding:8px 20px;font-size:13px;cursor:pointer;background:#1a4fa0;color:#fff;border:none;border-radius:5px">⎙ Imprimir / Salvar PDF</button></div>
+<div class="cab">
+  <div class="nome">Castanha Empreendimentos</div>
+  <div class="sub">Av. Santos Dumont, nº 3131 A – Sala 217 – Aldeota – Fortaleza/CE | CNPJ: 21.613.396/0001-12</div>
+</div>
+<div class="titulo">Simulação de Proposta de Compra</div>
+<div class="bloco">
+  <div class="bloco-tit">Dados do Imóvel</div>
+  <table>
+    <tr><td style="color:#555">Empreendimento</td><td>Portal do Horizonte</td></tr>
+    <tr><td style="color:#555">Quadra / Lote</td><td>Quadra ${l.q} / Lote ${l.l}</td></tr>
+    <tr><td style="color:#555">Tipo</td><td>${l.tipo||'—'}</td></tr>
+    <tr><td style="color:#555">Área</td><td>${l.area.toFixed(2)} m²</td></tr>
+    <tr><td style="color:#555">Valor do Lote</td><td>${BR(l.preco)}</td></tr>
+  </table>
+</div>
+<div class="bloco">
+  <div class="bloco-tit">Condições de Pagamento</div>
+  <table>
+    <tr><td style="color:#555">Entrada</td><td>${BR(entrada)}</td></tr>
+    <tr><td style="color:#555">Saldo a Financiar</td><td>${BR(saldo)}</td></tr>
+    <tr><td style="color:#555">Nº de Parcelas</td><td>${nParcelas}x</td></tr>
+    <tr><td style="color:#555">Taxa de Juros</td><td>${taxaMes>0?taxaMes.toFixed(2)+'% a.m.':'Sem juros (0%)'}</td></tr>
+    <tr><td style="color:#555">1º Pagamento</td><td>${data1Fmt}</td></tr>
+    <tr><td style="color:#555">Último Pagamento</td><td>${dataFim||'—'}</td></tr>
+    <tr><td style="color:#555">Total a Pagar</td><td>${BR(totalPago)}</td></tr>
+    <tr class="destaque"><td>Valor da Parcela Mensal</td><td>${BR(valorParcela)}</td></tr>
+  </table>
+</div>
+<div class="aviso">* Esta simulação é meramente ilustrativa e não constitui proposta comercial ou contrato. Valores sujeitos a alteração sem aviso prévio.</div>
+<div class="ass-grid">
+  <div class="ass-item"><div class="ass-ln">Assinatura do Cliente<br><span style="font-size:8pt">Nome: ___________________________________<br>CPF: ____________________________________</span></div></div>
+  <div class="ass-item"><div class="ass-ln">Assinatura do Corretor<br><span style="font-size:8pt">Nome: ___________________________________<br>CRECI: __________________________________</span></div></div>
+</div>
+<div class="rodape">Documento gerado em ${hoje} · Portal do Horizonte — Sistema Comercial</div>
+</body></html>`);
+  w.document.close();
+}
+
 function irParaPropostaDoModal(){
   if(!MRES_LOTE)return;
   const lote=MRES_LOTE;
