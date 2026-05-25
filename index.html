@@ -637,8 +637,8 @@ tr:hover td{background:var(--bg)}
         <input type="number" id="sim-parcelas" min="1" max="240" placeholder="60" oninput="calcSimulacao()">
       </div>
       <div class="fi">
-        <label>Taxa de Juros (% a.m.)</label>
-        <input type="number" id="sim-juros" min="0" step="0.01" placeholder="0.00" oninput="calcSimulacao()">
+        <label>Taxa de Juros (% a.m.) — opcional</label>
+        <input type="number" id="sim-juros" min="0" step="0.01" placeholder="Sem juros (deixe vazio)" oninput="calcSimulacao()">
       </div>
     </div>
     <div id="sim-resultado" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:13px 15px;margin-bottom:13px">
@@ -657,7 +657,7 @@ tr:hover td{background:var(--bg)}
     <div id="sim-aviso" style="display:none;color:var(--amber);font-size:11px;margin-bottom:10px"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn" onclick="closeSimulacao()">Fechar</button>
-      <button class="btn btn-p" id="btn-imprimir-sim" onclick="imprimirSimulacao()" style="display:none">⎙ Imprimir</button>
+      <button class="btn btn-p" id="btn-imprimir-sim" onclick="imprimirSimulacao()" style="display:none">⎙ Gerar / Imprimir Proposta</button>
     </div>
   </div>
 </div>
@@ -854,15 +854,17 @@ function openReservaModal(l){
 }
 function closeReservaModal(){document.getElementById('modal-reserva').classList.remove('open');MRES_LOTE=null;}
 
+let SIM_LOTE=null;
 function abrirSimulacao(){
   if(!MRES_LOTE)return;
-  const l=MRES_LOTE;
+  SIM_LOTE=MRES_LOTE;
   closeReservaModal();
+  const l=SIM_LOTE;
   document.getElementById('sim-lote-info').textContent=`Quadra ${l.q} / Lote ${l.l} · ${l.tipo} · ${l.area.toFixed(2)} m²`;
   document.getElementById('sim-lote-preco').textContent=BR(l.preco);
   document.getElementById('sim-entrada').value='';
   document.getElementById('sim-parcelas').value='60';
-  document.getElementById('sim-juros').value='0';
+  document.getElementById('sim-juros').value='';
   const hoje=new Date();hoje.setMonth(hoje.getMonth()+1);hoje.setDate(1);
   document.getElementById('sim-data1').value=hoje.toISOString().slice(0,10);
   document.getElementById('sim-resultado').style.display='none';
@@ -871,11 +873,11 @@ function abrirSimulacao(){
   document.getElementById('modal-simulacao').classList.add('open');
   calcSimulacao();
 }
-function closeSimulacao(){document.getElementById('modal-simulacao').classList.remove('open');}
+function closeSimulacao(){document.getElementById('modal-simulacao').classList.remove('open');SIM_LOTE=null;}
 
 function calcSimulacao(){
-  if(!MRES_LOTE)return;
-  const total=MRES_LOTE.preco||0;
+  if(!SIM_LOTE)return;
+  const total=SIM_LOTE.preco||0;
   const entrada=parseFloat(document.getElementById('sim-entrada').value)||0;
   const nParcelas=parseInt(document.getElementById('sim-parcelas').value)||0;
   const taxaMes=parseFloat(document.getElementById('sim-juros').value)||0;
@@ -914,8 +916,8 @@ function calcSimulacao(){
 }
 
 function imprimirSimulacao(){
-  if(!MRES_LOTE)return;
-  const l=MRES_LOTE;
+  if(!SIM_LOTE)return;
+  const l=SIM_LOTE;
   const entrada=parseFloat(document.getElementById('sim-entrada').value)||0;
   const nParcelas=parseInt(document.getElementById('sim-parcelas').value)||0;
   const taxaMes=parseFloat(document.getElementById('sim-juros').value)||0;
