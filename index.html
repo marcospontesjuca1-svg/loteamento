@@ -1717,29 +1717,36 @@ function confirmDist(){if(!DISTCTR)return;const resp=V('dist-resp'),motivo=V('di
 // ── Conjugue ─────────────────────────────────────────────────────────────
 function toggleConjuge(){const ec=V('pec');document.getElementById('conjugue-section').style.display=(ec==='Casado(a)'||ec==='União estável')?'block':'none';}
 
-// ── Documentos (upload) ───────────────────────────────────────────────────
+// ── Documentos (upload via Cloudinary) ───────────────────────────────────
+const CDN_CLOUD='dlgrpq42a';
+const CDN_PRESET='ml_default';
 let PA_DOCS=[];
 function addDocs(inp){
   Array.from(inp.files).forEach(f=>{
     if(f.size>10*1024*1024){alert(`"${f.name}" excede 10 MB.`);return;}
     const idx=PA_DOCS.length;
-    PA_DOCS.push({nome:f.name,tipo:f.type,size:f.size,url:null,uploading:true});
+    PA_DOCS.push({nome:f.name,tipo:f.type,size:f.size,url:null,uploading:true,pct:0});
     renderDocList();
-    const ref=storage.ref(`docs_propostas/temp_${Date.now()}_${f.name}`);
-    const task=ref.put(f);
-    task.on('state_changed',
-      snap=>{const pct=Math.round(snap.bytesTransferred/snap.totalBytes*100);PA_DOCS[idx].pct=pct;renderDocList();},
-      err=>{console.error('Upload erro:',err);PA_DOCS[idx].uploading=false;PA_DOCS[idx].erro=true;renderDocList();},
-      ()=>{task.snapshot.ref.getDownloadURL().then(url=>{PA_DOCS[idx].url=url;PA_DOCS[idx].uploading=false;PA_DOCS[idx].ref=ref.fullPath;renderDocList();});}
-    );
+    const fd=new FormData();
+    fd.append('file',f);
+    fd.append('upload_preset',CDN_PRESET);
+    fd.append('folder','docs_propostas');
+    const xhr=new XMLHttpRequest();
+    xhr.open('POST',`https://api.cloudinary.com/v1_1/${CDN_CLOUD}/auto/upload`);
+    xhr.upload.onprogress=e=>{if(e.lengthComputable){PA_DOCS[idx].pct=Math.round(e.loaded/e.total*100);renderDocList();}};
+    xhr.onload=()=>{
+      if(xhr.status===200){
+        const res=JSON.parse(xhr.responseText);
+        PA_DOCS[idx].url=res.secure_url;PA_DOCS[idx].ref=res.public_id;PA_DOCS[idx].uploading=false;
+      }else{PA_DOCS[idx].uploading=false;PA_DOCS[idx].erro=true;}
+      renderDocList();
+    };
+    xhr.onerror=()=>{PA_DOCS[idx].uploading=false;PA_DOCS[idx].erro=true;renderDocList();};
+    xhr.send(fd);
   });
   inp.value='';
 }
-function removeDoc(i){
-  const d=PA_DOCS[i];
-  if(d&&d.ref&&!d.url){storage.ref(d.ref).delete().catch(()=>{});}
-  PA_DOCS.splice(i,1);renderDocList();
-}
+function removeDoc(i){PA_DOCS.splice(i,1);renderDocList();}
 function renderDocList(){
   const el=document.getElementById('docs-list');if(!el)return;
   el.innerHTML=PA_DOCS.map((d,i)=>{
