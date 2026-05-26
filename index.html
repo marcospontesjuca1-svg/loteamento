@@ -534,7 +534,8 @@ tr:hover td{background:var(--bg)}
     <div class="cs" id="cfgprecos"><div class="cst">Gestão de Preços por Quadra</div><div class="csb">
       <div class="alert ai" style="margin-bottom:11px;font-size:11px">Atualiza o valor do m² de uma quadra inteira. Lotes <b>Reservados</b> ou <b>Em Proposta</b> mantêm o preço congelado da criação. Se cancelada a negociação, o lote assume o preço atualizado.</div>
       <div class="pm-row">
-        <div class="fi" style="min-width:90px"><label>Quadra</label><select id="pm-quadra"><option value="">Selecione</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>15</option><option>16</option><option>17</option><option>18</option><option>001</option><option>002</option></select></div>
+        <div class="fi" style="min-width:90px"><label>Quadra</label><select id="pm-quadra" onchange="pmPopulaLotes()"><option value="">Selecione</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>15</option><option>16</option><option>17</option><option>18</option><option>001</option><option>002</option></select></div>
+        <div class="fi" style="min-width:90px"><label>Lote</label><select id="pm-lote"><option value="">Todos</option></select></div>
         <div class="fi" style="min-width:140px"><label>Novo valor do m² (R$)</label><input id="pm-vlm2" type="number" min="0" step="0.01" placeholder="Ex: 750.00"></div>
         <button class="btn bsm btn-p" style="align-self:flex-end" onclick="updatePrecoQuadra()">Aplicar reajuste</button>
       </div>
@@ -617,7 +618,7 @@ tr:hover td{background:var(--bg)}
 
 <!-- MODAL SIMULAÇÃO -->
 <div class="mo" id="modal-simulacao">
-  <div class="mb" style="width:500px">
+  <div class="mb" style="width:520px">
     <div class="mt">◎ Simulação de Compra</div>
     <div id="sim-lote-info" style="font-size:12px;color:var(--text3);margin-bottom:2px"></div>
     <div id="sim-lote-preco" style="font-size:18px;font-weight:700;color:var(--blue);margin-bottom:14px"></div>
@@ -637,21 +638,34 @@ tr:hover td{background:var(--bg)}
         <input type="number" id="sim-parcelas" min="1" max="240" placeholder="60" oninput="calcSimulacao()">
       </div>
       <div class="fi">
-        <label>Taxa de Juros (% a.m.) — opcional</label>
-        <input type="number" id="sim-juros" min="0" step="0.01" placeholder="Sem juros (deixe vazio)" oninput="calcSimulacao()">
+        <label>Desconto (R$) — opcional</label>
+        <input type="number" id="sim-desconto" min="0" step="100" placeholder="0,00" oninput="calcSimulacao()">
+      </div>
+    </div>
+    <div class="fg2">
+      <div class="fi">
+        <label>Comissão Contratual (%)</label>
+        <input type="number" id="sim-comis-contratual" min="0" max="100" step="0.01" placeholder="Ex: 5" oninput="calcSimulacao()">
+      </div>
+      <div class="fi">
+        <label>Comissão Real (%) — informativo</label>
+        <input type="number" id="sim-comis-real" min="0" max="100" step="0.01" placeholder="Ex: 3" oninput="calcSimulacao()">
       </div>
     </div>
     <div id="sim-resultado" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:13px 15px;margin-bottom:13px">
       <table class="ftbl" style="width:100%;margin-bottom:0">
         <tr><td style="color:var(--text3)">Valor do Lote</td><td id="sr-total"></td></tr>
+        <tr id="sr-row-comis" style="display:none"><td style="color:var(--amber)">Comissão Contratual</td><td id="sr-comis" style="color:var(--amber)"></td></tr>
+        <tr id="sr-row-desc" style="display:none"><td style="color:var(--amber)">Desconto</td><td id="sr-desc" style="color:var(--amber)"></td></tr>
+        <tr><td style="color:var(--text3)">Preço Líquido</td><td id="sr-liquido" style="font-weight:600"></td></tr>
         <tr><td style="color:var(--text3)">Entrada</td><td id="sr-entrada"></td></tr>
         <tr><td style="color:var(--text3)">Saldo a Financiar</td><td id="sr-saldo"></td></tr>
         <tr><td style="color:var(--text3)">Nº de Parcelas</td><td id="sr-nparc"></td></tr>
-        <tr><td style="color:var(--text3)">Taxa de Juros</td><td id="sr-taxa"></td></tr>
         <tr><td style="color:var(--text3);font-size:14px;font-weight:600">Valor da Parcela</td><td id="sr-parcela" style="color:var(--green);font-size:16px"></td></tr>
         <tr><td style="color:var(--text3)">1º Pagamento</td><td id="sr-data1"></td></tr>
         <tr><td style="color:var(--text3)">Último Pagamento</td><td id="sr-dataend"></td></tr>
         <tr><td style="color:var(--text3)">Total a Pagar</td><td id="sr-totalpago"></td></tr>
+        <tr id="sr-row-comisreal" style="display:none"><td style="color:var(--text3);font-style:italic">Comissão Real (inf.)</td><td id="sr-comisreal" style="color:var(--text2);font-style:italic"></td></tr>
       </table>
     </div>
     <div id="sim-aviso" style="display:none;color:var(--amber);font-size:11px;margin-bottom:10px"></div>
@@ -864,7 +878,9 @@ function abrirSimulacao(){
   document.getElementById('sim-lote-preco').textContent=BR(l.preco);
   document.getElementById('sim-entrada').value='';
   document.getElementById('sim-parcelas').value='60';
-  document.getElementById('sim-juros').value='';
+  document.getElementById('sim-desconto').value='';
+  document.getElementById('sim-comis-contratual').value='';
+  document.getElementById('sim-comis-real').value='';
   const hoje=new Date();hoje.setMonth(hoje.getMonth()+1);hoje.setDate(1);
   document.getElementById('sim-data1').value=hoje.toISOString().slice(0,10);
   document.getElementById('sim-resultado').style.display='none';
@@ -880,37 +896,41 @@ function calcSimulacao(){
   const total=SIM_LOTE.preco||0;
   const entrada=parseFloat(document.getElementById('sim-entrada').value)||0;
   const nParcelas=parseInt(document.getElementById('sim-parcelas').value)||0;
-  const taxaMes=parseFloat(document.getElementById('sim-juros').value)||0;
+  const desconto=parseFloat(document.getElementById('sim-desconto').value)||0;
+  const comisContr=parseFloat(document.getElementById('sim-comis-contratual').value)||0;
+  const comisReal=parseFloat(document.getElementById('sim-comis-real').value)||0;
   const data1=document.getElementById('sim-data1').value;
   const aviso=document.getElementById('sim-aviso');
   const res=document.getElementById('sim-resultado');
-  if(entrada<0||entrada>total){aviso.textContent='A entrada não pode ser maior que o valor do lote.';aviso.style.display='block';res.style.display='none';document.getElementById('btn-imprimir-sim').style.display='none';return;}
+  const comisValor=total*(comisContr/100);
+  const precoLiq=total-comisValor-desconto;
+  if(precoLiq<0){aviso.textContent='Desconto + comissão excedem o valor do lote.';aviso.style.display='block';res.style.display='none';document.getElementById('btn-imprimir-sim').style.display='none';return;}
+  if(entrada<0||entrada>precoLiq){aviso.textContent='A entrada não pode ser maior que o preço líquido.';aviso.style.display='block';res.style.display='none';document.getElementById('btn-imprimir-sim').style.display='none';return;}
   if(nParcelas<1){aviso.style.display='none';res.style.display='none';document.getElementById('btn-imprimir-sim').style.display='none';return;}
   aviso.style.display='none';
-  const saldo=total-entrada;
-  let valorParcela;
-  if(taxaMes>0){
-    const i=taxaMes/100;
-    valorParcela=saldo*(i*Math.pow(1+i,nParcelas))/(Math.pow(1+i,nParcelas)-1);
-  }else{
-    valorParcela=saldo/nParcelas;
-  }
+  const saldo=precoLiq-entrada;
+  const valorParcela=nParcelas>0?saldo/nParcelas:0;
   const totalPago=entrada+(valorParcela*nParcelas);
   let dataFim='';
-  if(data1){
-    const d=new Date(data1+'T12:00:00');
-    d.setMonth(d.getMonth()+(nParcelas-1));
-    dataFim=d.toLocaleDateString('pt-BR');
-  }
+  if(data1){const d=new Date(data1+'T12:00:00');d.setMonth(d.getMonth()+(nParcelas-1));dataFim=d.toLocaleDateString('pt-BR');}
   document.getElementById('sr-total').textContent=BR(total);
+  const rowComis=document.getElementById('sr-row-comis');
+  if(comisContr>0){rowComis.style.display='';document.getElementById('sr-comis').textContent=`− ${BR(comisValor)} (${comisContr}%)`;}
+  else rowComis.style.display='none';
+  const rowDesc=document.getElementById('sr-row-desc');
+  if(desconto>0){rowDesc.style.display='';document.getElementById('sr-desc').textContent=`− ${BR(desconto)}`;}
+  else rowDesc.style.display='none';
+  document.getElementById('sr-liquido').textContent=BR(precoLiq);
   document.getElementById('sr-entrada').textContent=BR(entrada);
   document.getElementById('sr-saldo').textContent=BR(saldo);
   document.getElementById('sr-nparc').textContent=nParcelas+'x';
-  document.getElementById('sr-taxa').textContent=taxaMes>0?taxaMes.toFixed(2)+'% a.m.':'Sem juros';
   document.getElementById('sr-parcela').textContent=BR(valorParcela);
   document.getElementById('sr-data1').textContent=data1?new Date(data1+'T12:00:00').toLocaleDateString('pt-BR'):'—';
   document.getElementById('sr-dataend').textContent=dataFim||'—';
   document.getElementById('sr-totalpago').textContent=BR(totalPago);
+  const rowCR=document.getElementById('sr-row-comisreal');
+  if(comisReal>0){rowCR.style.display='';document.getElementById('sr-comisreal').textContent=`${comisReal}% = ${BR(total*(comisReal/100))}`;}
+  else rowCR.style.display='none';
   res.style.display='block';
   document.getElementById('btn-imprimir-sim').style.display='inline-flex';
 }
@@ -920,17 +940,22 @@ function imprimirSimulacao(){
   const l=SIM_LOTE;
   const entrada=parseFloat(document.getElementById('sim-entrada').value)||0;
   const nParcelas=parseInt(document.getElementById('sim-parcelas').value)||0;
-  const taxaMes=parseFloat(document.getElementById('sim-juros').value)||0;
+  const desconto=parseFloat(document.getElementById('sim-desconto').value)||0;
+  const comisContr=parseFloat(document.getElementById('sim-comis-contratual').value)||0;
+  const comisReal=parseFloat(document.getElementById('sim-comis-real').value)||0;
   const data1=document.getElementById('sim-data1').value;
-  const saldo=l.preco-entrada;
-  let valorParcela;
-  if(taxaMes>0){const i=taxaMes/100;valorParcela=saldo*(i*Math.pow(1+i,nParcelas))/(Math.pow(1+i,nParcelas)-1);}
-  else{valorParcela=saldo/nParcelas;}
+  const comisValor=l.preco*(comisContr/100);
+  const precoLiq=l.preco-comisValor-desconto;
+  const saldo=precoLiq-entrada;
+  const valorParcela=nParcelas>0?saldo/nParcelas:0;
   const totalPago=entrada+(valorParcela*nParcelas);
   let dataFim='';
   if(data1){const d=new Date(data1+'T12:00:00');d.setMonth(d.getMonth()+(nParcelas-1));dataFim=d.toLocaleDateString('pt-BR');}
   const data1Fmt=data1?new Date(data1+'T12:00:00').toLocaleDateString('pt-BR'):'—';
   const hoje=new Date().toLocaleDateString('pt-BR');
+  const rowComisContr=comisContr>0?`<tr><td style="color:#c07020">Comissão Contratual (${comisContr}%)</td><td style="color:#c07020">− ${BR(comisValor)}</td></tr>`:'';
+  const rowDesc=desconto>0?`<tr><td style="color:#c07020">Desconto</td><td style="color:#c07020">− ${BR(desconto)}</td></tr>`:'';
+  const rowComisReal=comisReal>0?`<tr><td style="color:#777;font-style:italic">Comissão Real (informativo)</td><td style="color:#777;font-style:italic">${comisReal}% = ${BR(l.preco*(comisReal/100))}</td></tr>`:'';
   const w=window.open('','_blank','width=800,height=700');
   w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Simulação — Q${l.q}/L${l.l}</title>
 <style>
@@ -968,7 +993,9 @@ td:last-child{text-align:right;font-weight:600}
     <tr><td style="color:#555">Quadra / Lote</td><td>Quadra ${l.q} / Lote ${l.l}</td></tr>
     <tr><td style="color:#555">Tipo</td><td>${l.tipo||'—'}</td></tr>
     <tr><td style="color:#555">Área</td><td>${l.area.toFixed(2)} m²</td></tr>
-    <tr><td style="color:#555">Valor do Lote</td><td>${BR(l.preco)}</td></tr>
+    <tr><td style="color:#555">Valor Tabela</td><td>${BR(l.preco)}</td></tr>
+    ${rowComisContr}${rowDesc}
+    <tr><td style="color:#555;font-weight:700">Preço Líquido</td><td style="font-weight:700">${BR(precoLiq)}</td></tr>
   </table>
 </div>
 <div class="bloco">
@@ -977,11 +1004,11 @@ td:last-child{text-align:right;font-weight:600}
     <tr><td style="color:#555">Entrada</td><td>${BR(entrada)}</td></tr>
     <tr><td style="color:#555">Saldo a Financiar</td><td>${BR(saldo)}</td></tr>
     <tr><td style="color:#555">Nº de Parcelas</td><td>${nParcelas}x</td></tr>
-    <tr><td style="color:#555">Taxa de Juros</td><td>${taxaMes>0?taxaMes.toFixed(2)+'% a.m.':'Sem juros (0%)'}</td></tr>
     <tr><td style="color:#555">1º Pagamento</td><td>${data1Fmt}</td></tr>
     <tr><td style="color:#555">Último Pagamento</td><td>${dataFim||'—'}</td></tr>
     <tr><td style="color:#555">Total a Pagar</td><td>${BR(totalPago)}</td></tr>
     <tr class="destaque"><td>Valor da Parcela Mensal</td><td>${BR(valorParcela)}</td></tr>
+    ${rowComisReal}
   </table>
 </div>
 <div class="aviso">* Esta simulação é meramente ilustrativa e não constitui proposta comercial ou contrato. Valores sujeitos a alteração sem aviso prévio.</div>
@@ -1163,6 +1190,7 @@ function submitProp(){
   localStorage.setItem('ph_reservas_ativas',JSON.stringify(_rv2));
   chSt(l.q,l.l,'Reservado',`Proposta ${PA.num}`);
   LF.push({...PA,status:'aguardando',ts:new Date().toISOString()});
+  salvarDocsLocalStorage(PA.num);
   save();
   const pending=LF.filter(f=>f.status==='aguardando'||f.status==='aguardando_dir').length;
   const bf=document.getElementById('bf');if(bf){bf.style.display=pending>0?'inline':'none';bf.textContent=pending;}
@@ -1555,16 +1583,25 @@ function renderFila(){const el=document.getElementById('filabody');if(!LF.length
 
 /* ── CONTRATOS ── */
 function clearCtrFilters(){['ctr-fst','ctr-fq'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});['ctr-fcorr','ctr-fcli'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});renderCtr();}
-function renderCtr(){const el=document.getElementById('ctrbody');const s=gS();const isCorr=s&&s.perfil==='corretor';const fSt=(document.getElementById('ctr-fst')||{}).value||'';const fCorr=((document.getElementById('ctr-fcorr')||{}).value||'').toLowerCase();const fCli=((document.getElementById('ctr-fcli')||{}).value||'').toLowerCase();const fQ=(document.getElementById('ctr-fq')||{}).value||'';let base=isCorr?LC.filter(c=>c.corretor===s.nome):LC;const lista=base.filter(c=>{if(fSt){const st=c.status==='distratado'?'distratado':'aprovado';if(st!==fSt)return false;}if(fCorr&&!(c.corretor||'').toLowerCase().includes(fCorr))return false;if(fCli&&!(c.comprador||'').toLowerCase().includes(fCli))return false;if(fQ&&c.lote&&String(c.lote.q)!==String(fQ))return false;return true;});const cntEl=document.getElementById('ctr-cnt');if(cntEl)cntEl.textContent=lista.length+' contrato(s)';if(!lista.length){el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado.</div>';return;}el.innerHTML='';lista.forEach(c=>{const l=c.lote;const isDist=c.status==='distratado';const statusPill=isDist?'<span class="pill pa">Distratado</span>':c.baixado?'<span class="pill pb">Baixado</span>':'<span class="pill pg">Aprovado</span>';const distBtn=(!isCorr&&!isDist)?`<button class="btn bsm btn-d" onclick='openDist(${JSON.stringify(c)})' style="font-size:10px">Distrato</button>`:'';const pdfBtn=`<button class="btn bsm" onclick='dlContratoX(${JSON.stringify(c)})'>⬇ PDF</button>`;const btns=`<div style="display:flex;gap:5px;align-items:center">${distBtn}${pdfBtn}</div>`;const distInfo=isDist?`<div style="font-size:10px;color:var(--red);margin-top:2px">Distratado em ${new Date(c.distratoEm).toLocaleDateString('pt-BR')} · ${c.distratoMotivo||''}</div>`:'';const baixadoInfo=(!isDist&&c.baixado)?`<div style="font-size:10px;color:var(--text3);margin-top:2px">Contrato baixado em ${new Date(c.baixadoEm).toLocaleDateString('pt-BR')}</div>`:'';el.innerHTML+=`<div style="border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:13px;font-weight:600">${c.num} ${statusPill}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Q${l.q}/L${l.l} · ${l.area.toFixed(2)} m² · ${BR(l.preco)}</div><div style="font-size:11px;color:var(--text3)">${c.comprador||'—'} · ${c.prazo}× de ${BR(c.parc)} · Aprov. por ${c.resp||'—'}</div>${distInfo}${baixadoInfo}</div>${btns}</div>`;});}
+function renderCtr(){const el=document.getElementById('ctrbody');const s=gS();const isCorr=s&&s.perfil==='corretor';const fSt=(document.getElementById('ctr-fst')||{}).value||'';const fCorr=((document.getElementById('ctr-fcorr')||{}).value||'').toLowerCase();const fCli=((document.getElementById('ctr-fcli')||{}).value||'').toLowerCase();const fQ=(document.getElementById('ctr-fq')||{}).value||'';let base=isCorr?LC.filter(c=>c.corretor===s.nome):LC;const lista=base.filter(c=>{if(fSt){const st=c.status==='distratado'?'distratado':'aprovado';if(st!==fSt)return false;}if(fCorr&&!(c.corretor||'').toLowerCase().includes(fCorr))return false;if(fCli&&!(c.comprador||'').toLowerCase().includes(fCli))return false;if(fQ&&c.lote&&String(c.lote.q)!==String(fQ))return false;return true;});const cntEl=document.getElementById('ctr-cnt');if(cntEl)cntEl.textContent=lista.length+' contrato(s)';if(!lista.length){el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado.</div>';return;}el.innerHTML='';lista.forEach(c=>{const l=c.lote;const isDist=c.status==='distratado';const statusPill=isDist?'<span class="pill pa">Distratado</span>':c.baixado?'<span class="pill pb">Baixado</span>':'<span class="pill pg">Aprovado</span>';const distBtn=(!isCorr&&!isDist)?`<button class="btn bsm btn-d" onclick='openDist(${JSON.stringify(c)})' style="font-size:10px">Distrato</button>`:'';const pdfBtn=`<button class="btn bsm" onclick='dlContratoX(${JSON.stringify(c)})'>⬇ PDF</button>`;const docsN=(getDocsLocalStorage(c.num)||[]).length;const docsBtn=docsN>0?`<button class="btn bsm" onclick='verDocsContrato("${c.num}")' title="${docsN} doc(s) anexado(s)">&#128206; Docs (${docsN})</button>`:'';const btns=`<div style="display:flex;gap:5px;align-items:center">${distBtn}${pdfBtn}${docsBtn}</div>`;const distInfo=isDist?`<div style="font-size:10px;color:var(--red);margin-top:2px">Distratado em ${new Date(c.distratoEm).toLocaleDateString('pt-BR')} · ${c.distratoMotivo||''}</div>`:'';const baixadoInfo=(!isDist&&c.baixado)?`<div style="font-size:10px;color:var(--text3);margin-top:2px">Contrato baixado em ${new Date(c.baixadoEm).toLocaleDateString('pt-BR')}</div>`:'';el.innerHTML+=`<div style="border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:13px;font-weight:600">${c.num} ${statusPill}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Q${l.q}/L${l.l} · ${l.area.toFixed(2)} m² · ${BR(l.preco)}</div><div style="font-size:11px;color:var(--text3)">${c.comprador||'—'} · ${c.prazo}× de ${BR(c.parc)} · Aprov. por ${c.resp||'—'}</div>${distInfo}${baixadoInfo}</div>${btns}</div>`;});}
 
 /* ── GESTÃO DE PREÇOS ── */
+function pmPopulaLotes(){
+  const q=document.getElementById('pm-quadra').value;
+  const sel=document.getElementById('pm-lote');
+  if(!q){sel.innerHTML='<option value="">Todos</option>';return;}
+  const nums=[...new Set(LS.filter(l=>l.q===q).map(l=>l.l))].sort((a,b)=>a-b);
+  sel.innerHTML='<option value="">Todos os lotes</option>'+nums.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
 function updatePrecoQuadra(){
   const q=document.getElementById('pm-quadra').value;
+  const loteNum=document.getElementById('pm-lote').value;
   const vlm2=parseFloat(document.getElementById('pm-vlm2').value);
   const res=document.getElementById('pm-result');
   if(!q||isNaN(vlm2)||vlm2<=0){alert('Selecione a quadra e informe um valor válido.');return;}
-  if(!confirm(`Aplicar R$ ${vlm2.toFixed(2)}/m² a todos os lotes DISPONÍVEIS da Quadra ${q}?\nLotes Reservados e Em Proposta mantêm o preço congelado.`))return;
-  const lotes=LS.filter(l=>l.q===q&&l.status==='Disponivel');
+  const alvo=loteNum?`Lote ${loteNum} da Quadra ${q}`:`todos os lotes DISPONÍVEIS da Quadra ${q}`;
+  if(!confirm(`Aplicar R$ ${vlm2.toFixed(2)}/m² a ${alvo}?\nLotes Reservados e Em Proposta mantêm o preço congelado.`))return;
+  const lotes=LS.filter(l=>l.q===q&&l.status==='Disponivel'&&(!loteNum||String(l.l)===String(loteNum)));
   let n=0;
   lotes.forEach(l=>{
     l.vlm2=vlm2;
@@ -1585,7 +1622,8 @@ function updatePrecoQuadra(){
   else last.v=allAvg;
   localStorage.setItem('ph_pricehistory',JSON.stringify(hist));
   save();
-  res.style.display='block';res.innerHTML=`<div class="alert as">✓ ${n} lote(s) da Quadra ${q} atualizados para ${BR(vlm2)}/m². Lotes reservados/em proposta mantiveram preço congelado.</div>`;
+  const loteLabel=loteNum?` (Lote ${loteNum})`:'';
+  res.style.display='block';res.innerHTML=`<div class="alert as">✓ ${n} lote(s) da Quadra ${q}${loteLabel} atualizados para ${BR(vlm2)}/m². Lotes reservados/em proposta mantiveram preço congelado.</div>`;
   if(document.getElementById('pg-disp').classList.contains('active'))renderDisp();
 }
 /* ── INADIMPLÊNCIA ── */
@@ -1643,7 +1681,11 @@ function toggleConjuge(){const ec=V('pec');document.getElementById('conjugue-sec
 let PA_DOCS=[];
 function addDocs(inp){Array.from(inp.files).forEach(f=>{if(f.size>5*1024*1024){alert(`Arquivo "${f.name}" excede 5 MB.`);return;}const rd=new FileReader();rd.onload=e=>{PA_DOCS.push({nome:f.name,tipo:f.type,size:f.size,base64:e.target.result});renderDocList();};rd.readAsDataURL(f);});inp.value='';}
 function removeDoc(i){PA_DOCS.splice(i,1);renderDocList();}
-function renderDocList(){const el=document.getElementById('docs-list');if(!el)return;el.innerHTML=PA_DOCS.map((d,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-radius:var(--rs);padding:5px 9px;font-size:12px"><span>&#128206; ${d.nome} <span style="color:var(--text3)">(${(d.size/1024).toFixed(0)} KB)</span></span><button class="btn bsm" style="padding:2px 7px;color:var(--red)" onclick="removeDoc(${i})">&#10005;</button></div>`).join('');}
+function renderDocList(){const el=document.getElementById('docs-list');if(!el)return;el.innerHTML=PA_DOCS.map((d,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-radius:var(--rs);padding:5px 9px;font-size:12px"><span>&#128206; ${d.nome} <span style="color:var(--text3)">(${(d.size/1024).toFixed(0)} KB)</span></span><div style="display:flex;gap:5px"><button class="btn bsm" style="padding:2px 7px" onclick="verDoc(${i})">&#128065; Ver</button><button class="btn bsm" style="padding:2px 7px;color:var(--red)" onclick="removeDoc(${i})">&#10005;</button></div></div>`).join('');}
+function verDoc(i){const d=PA_DOCS[i];if(!d)return;const w=window.open('');w.document.write(`<iframe src="${d.base64}" style="width:100%;height:100vh;border:none"></iframe>`);}
+function salvarDocsLocalStorage(num){if(PA_DOCS.length===0)return;try{localStorage.setItem('ph_docs_'+num,JSON.stringify(PA_DOCS));}catch(e){console.warn('Docs muito grandes para localStorage:',e);}}
+function getDocsLocalStorage(num){try{return JSON.parse(localStorage.getItem('ph_docs_'+num)||'[]');}catch{return[];}}
+function verDocsContrato(num){const docs=getDocsLocalStorage(num);if(!docs.length){alert('Nenhum documento salvo para este contrato.');return;}docs.forEach(d=>{const w=window.open('');w.document.write(`<div style="font-family:sans-serif;padding:10px;background:#f0f0f0"><b>${d.nome}</b></div><iframe src="${d.base64}" style="width:100%;height:calc(100vh - 40px);border:none"></iframe>`);});}
 
 // ── Máscaras e validação ──────────────────────────────────────────────────
 function maskCPF(el){let v=el.value.replace(/\D/g,'').substring(0,11);v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');el.value=v;}
