@@ -1721,7 +1721,10 @@ function addDocs(inp){
       if(xhr.status===200){
         const res=JSON.parse(xhr.responseText);
         PA_DOCS[idx].url=res.secure_url;PA_DOCS[idx].ref=res.public_id;PA_DOCS[idx].uploading=false;
-      }else{PA_DOCS[idx].uploading=false;PA_DOCS[idx].erro=true;}
+      }else{
+        let msg='Erro';try{const e=JSON.parse(xhr.responseText);msg='Erro: '+(e.error&&e.error.message||xhr.status);}catch{}
+        PA_DOCS[idx].uploading=false;PA_DOCS[idx].erro=true;PA_DOCS[idx].erroMsg=msg;
+      }
       renderDocList();
     };
     xhr.onerror=()=>{PA_DOCS[idx].uploading=false;PA_DOCS[idx].erro=true;renderDocList();};
@@ -1734,7 +1737,7 @@ function renderDocList(){
   const el=document.getElementById('docs-list');if(!el)return;
   el.innerHTML=PA_DOCS.map((d,i)=>{
     const kb=(d.size/1024).toFixed(0);
-    const status=d.erro?'<span style="color:var(--red)">Erro</span>':d.uploading?`<span style="color:var(--amber)">⬆ ${d.pct||0}%</span>`:'<span style="color:var(--green)">✓ Enviado</span>';
+    const status=d.erro?`<span style="color:var(--red)" title="${d.erroMsg||'Erro'}">${d.erroMsg||'Erro'}</span>`:d.uploading?`<span style="color:var(--amber)">⬆ ${d.pct||0}%</span>`:'<span style="color:var(--green)">✓ Enviado</span>';
     const verBtn=d.url?`<a href="${d.url}" target="_blank" class="btn bsm" style="padding:2px 7px">&#128065; Ver</a>`:'';
     return`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-radius:var(--rs);padding:5px 9px;font-size:12px"><span>&#128206; ${d.nome} <span style="color:var(--text3)">(${kb} KB)</span> ${status}</span><div style="display:flex;gap:5px">${verBtn}<button class="btn bsm" style="padding:2px 7px;color:var(--red)" onclick="removeDoc(${i})">&#10005;</button></div></div>`;
   }).join('');
