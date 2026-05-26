@@ -1212,23 +1212,6 @@ function submitProp(){
   const _rv2=JSON.parse(localStorage.getItem('ph_reservas_ativas')||'[]').filter(rv=>!(rv.q===l.q&&rv.l===l.l));
   localStorage.setItem('ph_reservas_ativas',JSON.stringify(_rv2));
   chSt(l.q,l.l,'Reservado',`Proposta ${PA.num}`);
-  /* Renomear arquivos no Storage para pasta definitiva da proposta */
-  const numProp=PA.num;
-  PA_DOCS.forEach((d,i)=>{
-    if(d.ref&&d.url){
-      const novoRef=storage.ref(`docs_propostas/${numProp}/${d.nome}`);
-      storage.ref(d.ref).getDownloadURL().then(()=>{
-        /* copia movendo: faz novo upload a partir da URL pública */
-        fetch(d.url).then(r=>r.blob()).then(blob=>{
-          novoRef.put(blob).then(()=>novoRef.getDownloadURL().then(novaUrl=>{
-            PA_DOCS[i].url=novaUrl;PA_DOCS[i].ref=novoRef.fullPath;
-            PA.docs[i]={...PA.docs[i],url:novaUrl,ref:novoRef.fullPath};
-            salvarDocsLocalStorage(numProp);
-          }));
-        }).catch(()=>{});
-      }).catch(()=>{});
-    }
-  });
   LF.push({...PA,status:'aguardando',ts:new Date().toISOString()});
   salvarDocsLocalStorage(PA.num);
   save();
@@ -1770,8 +1753,6 @@ function abrirDocsContrato(docs){
   if(!docs||!docs.length){alert('Nenhum documento disponível.');return;}
   docs.forEach(d=>{if(d.url)window.open(d.url,'_blank');});
 }
-function getDocsLocalStorage(num){try{return JSON.parse(localStorage.getItem('ph_docs_'+num)||'[]');}catch{return[];}}
-function verDocsContrato(num){const docs=getDocsLocalStorage(num);if(!docs.length){alert('Nenhum documento salvo para este contrato.');return;}docs.forEach(d=>{const w=window.open('');w.document.write(`<div style="font-family:sans-serif;padding:10px;background:#f0f0f0"><b>${d.nome}</b></div><iframe src="${d.base64}" style="width:100%;height:calc(100vh - 40px);border:none"></iframe>`);});}
 
 // ── Máscaras e validação ──────────────────────────────────────────────────
 function maskCPF(el){let v=el.value.replace(/\D/g,'').substring(0,11);v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');el.value=v;}
