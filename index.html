@@ -1720,7 +1720,7 @@ function addDocs(inp){
     fd.append('folder','docs_propostas');
     fd.append('resource_type','raw');
     const xhr=new XMLHttpRequest();
-    xhr.open('POST',`https://api.cloudinary.com/v1_1/${CDN_CLOUD}/auto/upload`);
+    xhr.open('POST',`https://api.cloudinary.com/v1_1/${CDN_CLOUD}/raw/upload`);
     xhr.upload.onprogress=e=>{if(e.lengthComputable){PA_DOCS[idx].pct=Math.round(e.loaded/e.total*100);renderDocList();}};
     xhr.onload=()=>{
       if(xhr.status===200){
