@@ -1484,30 +1484,33 @@ function renderCR(){
   const hoje=new Date();hoje.setHours(0,0,0,0);
   const lst=data.filter(r=>{
     const st=crStatus(r);
-    const nomeCli=String(r[CR_FIELDS.nome]||r.NOMECLI||r.nome||r.NomeCliente||'');
-    const codCli=String(r[CR_FIELDS.cod]||r.CODCLI||r.codigo||'');
+    const nomeCli=String(r[CR_FIELDS.nome]||r.NOMECLI||r.nome||r.NomeCliente||'').trim();
+    const codCli=String(r[CR_FIELDS.cod]||r.CODCLI||r.codigo||'').trim();
     if(cliSel&&nomeCli!==cliSel)return false;
     if(fcli&&!nomeCli.toLowerCase().includes(fcli)&&!codCli.includes(fcli)&&!(r[CR_FIELDS.doc]||r.NUMDOC||'').toString().includes(fcli))return false;
     if(fst&&st!==fst)return false;
-    if(fde&&r.DTVENC<fde)return false;
-    if(fat&&r.DTVENC>fat)return false;
+    const _vc=r[CR_FIELDS.venc]||r.DTVENC||'';
+    if(fde&&_vc<fde)return false;
+    if(fat&&_vc>fat)return false;
     return true;
   });
   const cnt=document.getElementById('cr-cnt');if(cnt)cnt.textContent=lst.length+' título(s)';
   /* KPIs */
-  const totRec=lst.filter(r=>crStatus(r)!=='quitado').reduce((s,r)=>s+(r.SALDO||r.VALOR||0),0);
-  const totVenc=lst.filter(r=>crStatus(r)==='vencido').reduce((s,r)=>s+(r.SALDO||r.VALOR||0),0);
+  const crVal=(r)=>parseFloat(r[CR_FIELDS.saldo]??r.SALDO??r[CR_FIELDS.valor]??r.VALOR??0);
+  const crVenc=(r)=>r[CR_FIELDS.venc]||r.DTVENC||'';
+  const totRec=lst.filter(r=>crStatus(r)!=='quitado').reduce((s,r)=>s+crVal(r),0);
+  const totVenc=lst.filter(r=>crStatus(r)==='vencido').reduce((s,r)=>s+crVal(r),0);
   const mesAtual=hoje.getMonth(),anoAtual=hoje.getFullYear();
-  const aVencer=lst.filter(r=>{const v=new Date(r.DTVENC+'T00:00:00');return crStatus(r)==='aberto'&&v.getMonth()===mesAtual&&v.getFullYear()===anoAtual;}).reduce((s,r)=>s+(r.SALDO||r.VALOR||0),0);
-  const recMes=data.filter(r=>{const v=new Date(r.DTVENC+'T00:00:00');return crStatus(r)==='quitado'&&v.getMonth()===mesAtual&&v.getFullYear()===anoAtual;}).reduce((s,r)=>s+(r.VALOR||0),0);
+  const aVencer=lst.filter(r=>{const vc=crVenc(r);if(!vc)return false;const v=new Date(vc+'T00:00:00');return crStatus(r)==='aberto'&&v.getMonth()===mesAtual&&v.getFullYear()===anoAtual;}).reduce((s,r)=>s+crVal(r),0);
+  const recMes=data.filter(r=>{const vc=crVenc(r);if(!vc)return false;const v=new Date(vc+'T00:00:00');return crStatus(r)==='quitado'&&v.getMonth()===mesAtual&&v.getFullYear()===anoAtual;}).reduce((s,r)=>s+(parseFloat(r[CR_FIELDS.valor]??r.VALOR??0)),0);
   const kpiEl=document.getElementById('cr-kpis');
   if(kpiEl)kpiEl.innerHTML=`<div class="kpi" style="border-left:3px solid var(--blue)"><div class="kl">Total a receber</div><div class="kv" style="font-size:16px;color:var(--blue)">${BR(totRec)}</div><div class="ks">${lst.filter(r=>crStatus(r)!=='quitado').length} título(s) em aberto</div></div><div class="kpi" style="border-left:3px solid var(--red)"><div class="kl">Vencido</div><div class="kv" style="font-size:16px;color:var(--red)">${BR(totVenc)}</div><div class="ks">${lst.filter(r=>crStatus(r)==='vencido').length} título(s) vencido(s)</div></div><div class="kpi" style="border-left:3px solid var(--amber)"><div class="kl">A vencer este mês</div><div class="kv" style="font-size:16px;color:var(--amber)">${BR(aVencer)}</div><div class="ks">vencimento em ${new Date(hoje.getFullYear(),hoje.getMonth()+1,0).toLocaleDateString('pt-BR',{month:'long'})}</div></div><div class="kpi" style="border-left:3px solid var(--green)"><div class="kl">Recebido no mês</div><div class="kv" style="font-size:16px;color:var(--green)">${BR(recMes)}</div><div class="ks">títulos quitados no mês</div></div>`;
   /* Aging */
   const venc=data.filter(r=>crStatus(r)==='vencido');
-  const a30=venc.filter(r=>crDias(r.DTVENC)<=30).reduce((s,r)=>s+(r.SALDO||r.VALOR||0),0);
-  const a60=venc.filter(r=>crDias(r.DTVENC)>30&&crDias(r.DTVENC)<=60).reduce((s,r)=>s+(r.SALDO||r.VALOR||0),0);
-  const a90=venc.filter(r=>crDias(r.DTVENC)>60&&crDias(r.DTVENC)<=90).reduce((s,r)=>s+(r.SALDO||r.VALOR||0),0);
-  const a90p=venc.filter(r=>crDias(r.DTVENC)>90).reduce((s,r)=>s+(r.SALDO||r.VALOR||0),0);
+  const a30=venc.filter(r=>crDias(crVenc(r))<=30).reduce((s,r)=>s+crVal(r),0);
+  const a60=venc.filter(r=>crDias(crVenc(r))>30&&crDias(crVenc(r))<=60).reduce((s,r)=>s+crVal(r),0);
+  const a90=venc.filter(r=>crDias(crVenc(r))>60&&crDias(crVenc(r))<=90).reduce((s,r)=>s+crVal(r),0);
+  const a90p=venc.filter(r=>crDias(crVenc(r))>90).reduce((s,r)=>s+crVal(r),0);
   const agTotal=a30+a60+a90+a90p||1;
   const agEl=document.getElementById('cr-aging');
   if(agEl)agEl.innerHTML=`<div class="ab" style="height:16px;border-radius:4px"><div class="as2" style="width:${(a30/agTotal*100).toFixed(1)}%;background:var(--amber)"></div><div class="as2" style="width:${(a60/agTotal*100).toFixed(1)}%;background:#e07020"></div><div class="as2" style="width:${(a90/agTotal*100).toFixed(1)}%;background:#c04020"></div><div class="as2" style="width:${(a90p/agTotal*100).toFixed(1)}%;background:var(--red)"></div></div><div class="al" style="margin-top:6px"><span class="ali"><span class="ald" style="background:var(--amber)"></span>1–30d ${BR(a30)}</span><span class="ali"><span class="ald" style="background:#e07020"></span>31–60d ${BR(a60)}</span><span class="ali"><span class="ald" style="background:#c04020"></span>61–90d ${BR(a90)}</span><span class="ali"><span class="ald" style="background:var(--red)"></span>+90d ${BR(a90p)}</span></div>`;
@@ -1516,8 +1519,8 @@ function renderCR(){
   if(!tb)return;
   const stPill={vencido:'pr',aberto:'pb',quitado:'pg'};
   const stLabel={vencido:'Vencido',aberto:'Em aberto',quitado:'Quitado'};
-  tb.innerHTML=lst.sort((a,b)=>a.DTVENC<b.DTVENC?-1:1).map(r=>{
-    const st=crStatus(r);const dias=crDias(r.DTVENC);
+  tb.innerHTML=lst.sort((a,b)=>(a[CR_FIELDS.venc]||a.DTVENC||'')<(b[CR_FIELDS.venc]||b.DTVENC||'')?-1:1).map(r=>{
+    const st=crStatus(r);const _rv=crVenc(r);const dias=crDias(_rv);
     const diasTxt=st==='vencido'?`<span style="color:var(--red);font-weight:600">${dias}d</span>`:st==='aberto'?`<span style="color:var(--text3)">${Math.abs(dias)}d</span>`:'—';
     const fn=CR_FIELDS;const nm=r[fn.nome]||r.NOMECLI||'—';const cd=r[fn.cod]||r.CODCLI||'';const dc=r[fn.doc]||r.NUMDOC||'—';const pc=r[fn.parc]||r.PARCELA||'—';const em=r[fn.emis]||r.DTEMIS||'';const vc=r[fn.venc]||r.DTVENC||'';const vl=parseFloat(r[fn.valor]??r.VALOR??0);const sl=parseFloat(r[fn.saldo]??r.SALDO??vl);const fmtD=d=>{if(!d)return'—';try{return new Date(d+'T00:00:00').toLocaleDateString('pt-BR');}catch{return d;}};return`<tr><td><div style="font-size:12px;font-weight:500">${nm}</div><div style="font-size:10px;color:var(--text3)">${cd}</div></td><td style="font-family:var(--m);font-size:11px">${dc}</td><td style="font-size:11px;text-align:center">${pc}</td><td style="font-size:11px;font-family:var(--m)">${fmtD(em)}</td><td style="font-size:11px;font-family:var(--m)">${fmtD(vc)}</td><td style="font-family:var(--m);font-size:11px">${BR(vl)}</td><td style="font-family:var(--m);font-size:11px;font-weight:600">${BR(sl)}</td><td style="text-align:center">${diasTxt}</td><td><span class="pill ${stPill[st]||'pgr'}">${stLabel[st]||st}</span></td></tr>`;
   }).join('');
