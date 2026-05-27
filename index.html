@@ -1473,6 +1473,7 @@ function getCRData(){return CR_DATA.length?CR_DATA:CR_MOCK;}
 function crDias(dtvenc){const hoje=new Date();hoje.setHours(0,0,0,0);const v=new Date(dtvenc+'T00:00:00');return Math.floor((hoje-v)/86400000);}
 function crStatus(r){const st=r[CR_FIELDS.status]||r.STATUS||'';if(st)return st.toLowerCase().includes('venc')?'vencido':st.toLowerCase().includes('quit')||st==='Q'?'quitado':st.toLowerCase().includes('aber')||st==='A'?'aberto':st;const venc=r[CR_FIELDS.venc]||r.DTVENC||'';const saldo=parseFloat(r[CR_FIELDS.saldo]??r.SALDO??1);if(saldo<=0)return'quitado';return venc&&crDias(venc)>0?'vencido':'aberto';}
 function renderCR(){
+  populateCRCombo();
   const isMock=!CR_DATA.length;
 
   const data=getCRData();
