@@ -214,6 +214,8 @@ tr:hover td{background:var(--bg)}
 .res-opt-btn.res-primary:hover{opacity:.88}
 .res-opt-btn.res-amber{background:var(--amber);color:white;border-color:var(--amber)}
 .res-opt-btn.res-amber:hover{opacity:.88}
+.res-opt-btn.res-blue{background:var(--blue);color:white;border-color:var(--blue)}
+.res-opt-btn.res-blue:hover{opacity:.88}
 /* ── KPI REVENUE ── */
 .kgrid2{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
 .kpi.kpi-rev{border-left:3px solid var(--green)}
@@ -226,6 +228,7 @@ tr:hover td{background:var(--bg)}
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
 <body>
 <style>@keyframes fbs{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>
@@ -532,7 +535,8 @@ tr:hover td{background:var(--bg)}
     <div class="cs" id="cfgprecos"><div class="cst">Gestão de Preços por Quadra</div><div class="csb">
       <div class="alert ai" style="margin-bottom:11px;font-size:11px">Atualiza o valor do m² de uma quadra inteira. Lotes <b>Reservados</b> ou <b>Em Proposta</b> mantêm o preço congelado da criação. Se cancelada a negociação, o lote assume o preço atualizado.</div>
       <div class="pm-row">
-        <div class="fi" style="min-width:90px"><label>Quadra</label><select id="pm-quadra"><option value="">Selecione</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>15</option><option>16</option><option>17</option><option>18</option><option>001</option><option>002</option></select></div>
+        <div class="fi" style="min-width:90px"><label>Quadra</label><select id="pm-quadra" onchange="pmPopulaLotes()"><option value="">Selecione</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>15</option><option>16</option><option>17</option><option>18</option><option>001</option><option>002</option></select></div>
+        <div class="fi" style="min-width:90px"><label>Lote</label><select id="pm-lote"><option value="">Todos</option></select></div>
         <div class="fi" style="min-width:140px"><label>Novo valor do m² (R$)</label><input id="pm-vlm2" type="number" min="0" step="0.01" placeholder="Ex: 750.00"></div>
         <button class="btn bsm btn-p" style="align-self:flex-end" onclick="updatePrecoQuadra()">Aplicar reajuste</button>
       </div>
@@ -607,10 +611,82 @@ tr:hover td{background:var(--bg)}
     <div class="res-opts">
       <button class="res-opt-btn res-primary" id="btn-nova-proposta" onclick="irParaPropostaDoModal()">✦ Nova Proposta</button>
       <button class="res-opt-btn res-amber" id="btn-reservar-lote" onclick="reservarLoteModal()">⊙ Reservar por 72h</button>
+      <button class="res-opt-btn res-blue" onclick="abrirSimulacao()">◎ Simulação de Compra</button>
       <button class="res-opt-btn" onclick="closeReservaModal()">Cancelar</button>
     </div>
   </div>
 </div>
+
+<!-- MODAL SIMULAÇÃO -->
+<div class="mo" id="modal-simulacao">
+  <div class="mb" style="width:520px">
+    <div class="mt">◎ Simulação de Compra</div>
+    <div id="sim-lote-info" style="font-size:12px;color:var(--text3);margin-bottom:2px"></div>
+    <div id="sim-lote-preco" style="font-size:18px;font-weight:700;color:var(--blue);margin-bottom:14px"></div>
+    <div class="fg2">
+      <div class="fi">
+        <label>Nome do Cliente</label>
+        <input type="text" id="sim-nome" placeholder="Nome completo">
+      </div>
+      <div class="fi">
+        <label>CPF</label>
+        <input type="text" id="sim-cpf" placeholder="000.000.000-00" maxlength="14">
+      </div>
+    </div>
+    <div class="fg2">
+      <div class="fi">
+        <label>Entrada (R$)</label>
+        <input type="number" id="sim-entrada" min="0" step="100" placeholder="0,00" oninput="calcSimulacao()">
+      </div>
+      <div class="fi">
+        <label>Data do 1º Pagamento</label>
+        <input type="date" id="sim-data1" oninput="calcSimulacao()">
+      </div>
+    </div>
+    <div class="fg2">
+      <div class="fi">
+        <label>Nº de Parcelas</label>
+        <input type="number" id="sim-parcelas" min="1" max="240" placeholder="60" oninput="calcSimulacao()">
+      </div>
+      <div class="fi">
+        <label>Desconto (R$) — opcional</label>
+        <input type="number" id="sim-desconto" min="0" step="100" placeholder="0,00" oninput="calcSimulacao()">
+      </div>
+    </div>
+    <div class="fg2">
+      <div class="fi">
+        <label>Comissão Contratual (%)</label>
+        <input type="number" id="sim-comis-contratual" min="0" max="100" step="0.01" placeholder="Ex: 5" oninput="calcSimulacao()">
+      </div>
+      <div class="fi">
+        <label>Comissão Real (%) — informativo</label>
+        <input type="number" id="sim-comis-real" min="0" max="100" step="0.01" placeholder="Ex: 3" oninput="calcSimulacao()">
+      </div>
+    </div>
+    <div id="sim-resultado" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:13px 15px;margin-bottom:13px">
+      <table class="ftbl" style="width:100%;margin-bottom:0">
+        <tr><td style="color:var(--text3)">Valor do Lote</td><td id="sr-total"></td></tr>
+        <tr id="sr-row-comis" style="display:none"><td style="color:var(--amber)">Comissão Contratual</td><td id="sr-comis" style="color:var(--amber)"></td></tr>
+        <tr id="sr-row-desc" style="display:none"><td style="color:var(--amber)">Desconto</td><td id="sr-desc" style="color:var(--amber)"></td></tr>
+        <tr><td style="color:var(--text3)">Preço Líquido</td><td id="sr-liquido" style="font-weight:600"></td></tr>
+        <tr><td style="color:var(--text3)">Entrada</td><td id="sr-entrada"></td></tr>
+        <tr><td style="color:var(--text3)">Saldo a Financiar</td><td id="sr-saldo"></td></tr>
+        <tr><td style="color:var(--text3)">Nº de Parcelas</td><td id="sr-nparc"></td></tr>
+        <tr><td style="color:var(--text3);font-size:14px;font-weight:600">Valor da Parcela</td><td id="sr-parcela" style="color:var(--green);font-size:16px"></td></tr>
+        <tr><td style="color:var(--text3)">1º Pagamento</td><td id="sr-data1"></td></tr>
+        <tr><td style="color:var(--text3)">Último Pagamento</td><td id="sr-dataend"></td></tr>
+        <tr><td style="color:var(--text3)">Total a Pagar</td><td id="sr-totalpago"></td></tr>
+        <tr id="sr-row-comisreal" style="display:none"><td style="color:var(--text3);font-style:italic">Comissão Real (inf.)</td><td id="sr-comisreal" style="color:var(--text2);font-style:italic"></td></tr>
+      </table>
+    </div>
+    <div id="sim-aviso" style="display:none;color:var(--amber);font-size:11px;margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeSimulacao()">Fechar</button>
+      <button class="btn btn-p" id="btn-imprimir-sim" onclick="imprimirSimulacao()" style="display:none">⎙ Gerar / Imprimir Proposta</button>
+    </div>
+  </div>
+</div>
+
 <div class="mo" id="modal-lote-reservado">
   <div class="mb" style="width:420px">
     <div class="mt" id="mlr-tit">Lote Reservado</div>
@@ -797,6 +873,172 @@ function openReservaModal(l){
   document.getElementById('modal-reserva').classList.add('open');
 }
 function closeReservaModal(){document.getElementById('modal-reserva').classList.remove('open');MRES_LOTE=null;}
+
+let SIM_LOTE=null;
+function abrirSimulacao(){
+  if(!MRES_LOTE)return;
+  SIM_LOTE=MRES_LOTE;
+  closeReservaModal();
+  const l=SIM_LOTE;
+  document.getElementById('sim-lote-info').textContent=`Quadra ${l.q} / Lote ${l.l} · ${l.tipo} · ${l.area.toFixed(2)} m²`;
+  document.getElementById('sim-lote-preco').textContent=BR(l.preco);
+  document.getElementById('sim-nome').value='';
+  document.getElementById('sim-cpf').value='';
+  document.getElementById('sim-entrada').value='';
+  document.getElementById('sim-parcelas').value='60';
+  document.getElementById('sim-desconto').value='';
+  document.getElementById('sim-comis-contratual').value='';
+  document.getElementById('sim-comis-real').value='';
+  const hoje=new Date();hoje.setMonth(hoje.getMonth()+1);hoje.setDate(1);
+  document.getElementById('sim-data1').value=hoje.toISOString().slice(0,10);
+  document.getElementById('sim-resultado').style.display='none';
+  document.getElementById('sim-aviso').style.display='none';
+  document.getElementById('btn-imprimir-sim').style.display='none';
+  document.getElementById('modal-simulacao').classList.add('open');
+  calcSimulacao();
+}
+function closeSimulacao(){document.getElementById('modal-simulacao').classList.remove('open');SIM_LOTE=null;}
+
+function calcSimulacao(){
+  if(!SIM_LOTE)return;
+  const total=SIM_LOTE.preco||0;
+  const entrada=parseFloat(document.getElementById('sim-entrada').value)||0;
+  const nParcelas=parseInt(document.getElementById('sim-parcelas').value)||0;
+  const desconto=parseFloat(document.getElementById('sim-desconto').value)||0;
+  const comisContr=parseFloat(document.getElementById('sim-comis-contratual').value)||0;
+  const comisReal=parseFloat(document.getElementById('sim-comis-real').value)||0;
+  const data1=document.getElementById('sim-data1').value;
+  const aviso=document.getElementById('sim-aviso');
+  const res=document.getElementById('sim-resultado');
+  const comisValor=total*(comisContr/100);
+  const precoLiq=total-comisValor-desconto;
+  if(precoLiq<0){aviso.textContent='Desconto + comissão excedem o valor do lote.';aviso.style.display='block';res.style.display='none';document.getElementById('btn-imprimir-sim').style.display='none';return;}
+  if(entrada<0||entrada>precoLiq){aviso.textContent='A entrada não pode ser maior que o preço líquido.';aviso.style.display='block';res.style.display='none';document.getElementById('btn-imprimir-sim').style.display='none';return;}
+  if(nParcelas<1){aviso.style.display='none';res.style.display='none';document.getElementById('btn-imprimir-sim').style.display='none';return;}
+  aviso.style.display='none';
+  const saldo=precoLiq-entrada;
+  const valorParcela=nParcelas>0?saldo/nParcelas:0;
+  const totalPago=entrada+(valorParcela*nParcelas);
+  let dataFim='';
+  if(data1){const d=new Date(data1+'T12:00:00');d.setMonth(d.getMonth()+(nParcelas-1));dataFim=d.toLocaleDateString('pt-BR');}
+  document.getElementById('sr-total').textContent=BR(total);
+  const rowComis=document.getElementById('sr-row-comis');
+  if(comisContr>0){rowComis.style.display='';document.getElementById('sr-comis').textContent=`− ${BR(comisValor)} (${comisContr}%)`;}
+  else rowComis.style.display='none';
+  const rowDesc=document.getElementById('sr-row-desc');
+  if(desconto>0){rowDesc.style.display='';document.getElementById('sr-desc').textContent=`− ${BR(desconto)}`;}
+  else rowDesc.style.display='none';
+  document.getElementById('sr-liquido').textContent=BR(precoLiq);
+  document.getElementById('sr-entrada').textContent=BR(entrada);
+  document.getElementById('sr-saldo').textContent=BR(saldo);
+  document.getElementById('sr-nparc').textContent=nParcelas+'x';
+  document.getElementById('sr-parcela').textContent=BR(valorParcela);
+  document.getElementById('sr-data1').textContent=data1?new Date(data1+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+  document.getElementById('sr-dataend').textContent=dataFim||'—';
+  document.getElementById('sr-totalpago').textContent=BR(totalPago);
+  const rowCR=document.getElementById('sr-row-comisreal');
+  if(comisReal>0){rowCR.style.display='';document.getElementById('sr-comisreal').textContent=`${comisReal}% = ${BR(total*(comisReal/100))}`;}
+  else rowCR.style.display='none';
+  res.style.display='block';
+  document.getElementById('btn-imprimir-sim').style.display='inline-flex';
+}
+
+function imprimirSimulacao(){
+  if(!SIM_LOTE)return;
+  const l=SIM_LOTE;
+  const nomeCliente=document.getElementById('sim-nome').value.trim()||'—';
+  const cpfCliente=document.getElementById('sim-cpf').value.trim()||'—';
+  const entrada=parseFloat(document.getElementById('sim-entrada').value)||0;
+  const nParcelas=parseInt(document.getElementById('sim-parcelas').value)||0;
+  const desconto=parseFloat(document.getElementById('sim-desconto').value)||0;
+  const comisContr=parseFloat(document.getElementById('sim-comis-contratual').value)||0;
+  const comisReal=parseFloat(document.getElementById('sim-comis-real').value)||0;
+  const data1=document.getElementById('sim-data1').value;
+  const comisValor=l.preco*(comisContr/100);
+  const precoLiq=l.preco-comisValor-desconto;
+  const saldo=precoLiq-entrada;
+  const valorParcela=nParcelas>0?saldo/nParcelas:0;
+  const totalPago=entrada+(valorParcela*nParcelas);
+  let dataFim='';
+  if(data1){const d=new Date(data1+'T12:00:00');d.setMonth(d.getMonth()+(nParcelas-1));dataFim=d.toLocaleDateString('pt-BR');}
+  const data1Fmt=data1?new Date(data1+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+  const hoje=new Date().toLocaleDateString('pt-BR');
+  const rowComisContr=comisContr>0?`<tr><td class="la" style="color:#b05a10">Comissão Contratual (${comisContr}%)</td><td style="color:#b05a10">− ${BR(comisValor)}</td></tr>`:'';
+  const rowDesc=desconto>0?`<tr><td class="la" style="color:#b05a10">Desconto</td><td style="color:#b05a10">− ${BR(desconto)}</td></tr>`:'';
+  const rowComisReal=comisReal>0?`<tr><td class="la" style="color:#888;font-style:italic">Comissão Real (informativo)</td><td style="color:#888;font-style:italic">${comisReal}% = ${BR(l.preco*(comisReal/100))}</td></tr>`:'';
+  const w=window.open('','_blank','width=820,height=900');
+  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Simulação — Q${l.q}/L${l.l}</title>
+<style>
+@page{size:A4 portrait;margin:1.5cm 1.8cm}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:9.5pt;color:#111;background:#fff}
+.noprint{background:#e8eef8;padding:8px;text-align:center;margin-bottom:12px;border-radius:4px}
+@media print{.noprint{display:none}body{font-size:9pt}}
+.cab{display:flex;align-items:center;justify-content:space-between;border-bottom:2.5px solid #1a4fa0;padding-bottom:7px;margin-bottom:10px}
+.cab-nome{font-size:13pt;font-weight:bold;letter-spacing:.5px;text-transform:uppercase;color:#1a4fa0}
+.cab-sub{font-size:7pt;color:#555;margin-top:2px}
+.cab-titulo{text-align:right}
+.cab-titulo .t1{font-size:11pt;font-weight:bold;text-transform:uppercase;color:#111}
+.cab-titulo .t2{font-size:7.5pt;color:#555;margin-top:1px}
+.secao{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.bloco{border:1px solid #d0d0d0;border-radius:3px;padding:7px 10px}
+.bloco.full{grid-column:1/-1}
+.bloco-tit{font-size:7pt;font-weight:bold;text-transform:uppercase;letter-spacing:.07em;color:#1a4fa0;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #e0e0e0}
+table{width:100%;border-collapse:collapse;font-size:8.8pt}
+td{padding:3px 2px;border-bottom:1px solid #f0f0f0}
+td.la{color:#555;width:55%}
+td.rv{text-align:right;font-weight:600}
+.destaque{background:#f0faf5;border-radius:2px}
+.destaque td{padding:5px 4px;border-bottom:none}
+.destaque td.la{font-size:10pt;font-weight:700;color:#1a7a50}
+.destaque td.rv{font-size:13pt;font-weight:800;color:#1a7a50;text-align:right}
+.ass{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:14px}
+.ass-item{text-align:center}
+.ass-ln{border-top:1px solid #111;margin-top:28px;padding-top:4px;font-size:7.5pt;color:#333;line-height:1.7}
+.aviso{font-size:6.5pt;color:#888;text-align:center;margin-top:8px;font-style:italic}
+.rodape{text-align:center;font-size:7pt;color:#999;border-top:1px solid #ddd;padding-top:5px;margin-top:10px}
+</style></head><body>
+<div class="noprint"><button onclick="window.print()" style="padding:6px 18px;font-size:12px;cursor:pointer;background:#1a4fa0;color:#fff;border:none;border-radius:4px">⎙ Imprimir / Salvar PDF</button></div>
+<div class="cab">
+  <div><div class="cab-nome">Castanha Empreendimentos</div><div class="cab-sub">Av. Santos Dumont, nº 3131 A – Sala 217 – Aldeota – Fortaleza/CE<br>CNPJ: 21.613.396/0001-12 · Fone: (85) 3456.5555</div></div>
+  <div class="cab-titulo"><div class="t1">Simulação de Compra</div><div class="t2">Empreendimento Portal do Horizonte · ${hoje}</div></div>
+</div>
+<div class="secao">
+  <div class="bloco">
+    <div class="bloco-tit">Dados do Cliente</div>
+    <table><tr><td class="la">Nome</td><td class="rv">${nomeCliente}</td></tr><tr><td class="la">CPF</td><td class="rv">${cpfCliente}</td></tr></table>
+  </div>
+  <div class="bloco">
+    <div class="bloco-tit">Dados do Imóvel</div>
+    <table>
+      <tr><td class="la">Quadra / Lote</td><td class="rv">Q${l.q} / L${l.l}</td></tr>
+      <tr><td class="la">Tipo / Área</td><td class="rv">${l.tipo||'—'} · ${l.area.toFixed(2)} m²</td></tr>
+      <tr><td class="la">Valor Tabela</td><td class="rv">${BR(l.preco)}</td></tr>
+      ${rowComisContr}${rowDesc}
+      <tr style="background:#f5f5f5"><td class="la" style="font-weight:700">Preço Líquido</td><td class="rv">${BR(precoLiq)}</td></tr>
+    </table>
+  </div>
+  <div class="bloco full">
+    <div class="bloco-tit">Condições de Pagamento</div>
+    <table>
+      <tr><td class="la">Entrada</td><td class="rv">${BR(entrada)}</td><td class="la" style="padding-left:20px">1º Pagamento</td><td class="rv">${data1Fmt}</td></tr>
+      <tr><td class="la">Saldo a Financiar</td><td class="rv">${BR(saldo)}</td><td class="la" style="padding-left:20px">Último Pagamento</td><td class="rv">${dataFim||'—'}</td></tr>
+      <tr><td class="la">Nº de Parcelas</td><td class="rv">${nParcelas}x</td><td class="la" style="padding-left:20px">Total a Pagar</td><td class="rv">${BR(totalPago)}</td></tr>
+      ${rowComisReal}
+    </table>
+    <table style="margin-top:8px"><tr class="destaque"><td class="la">Valor da Parcela Mensal</td><td class="rv">${BR(valorParcela)}</td></tr></table>
+  </div>
+</div>
+<div class="ass">
+  <div class="ass-item"><div class="ass-ln">Assinatura do Cliente<br>${nomeCliente}<br>CPF: ${cpfCliente}</div></div>
+  <div class="ass-item"><div class="ass-ln">Assinatura do Corretor / Vendedor<br>Nome: ______________________________<br>CRECI: _____________________________</div></div>
+</div>
+<div class="aviso">* Esta simulação tem validade de <strong>10 (dez) dias</strong> a partir da data de emissão (${hoje}). Após este prazo, os valores poderão ser revistos. Simulação meramente ilustrativa — não constitui proposta comercial ou contrato.</div>
+<div class="rodape">Documento gerado em ${hoje} · Portal do Horizonte — Sistema Comercial</div>
+</body></html>`);
+  w.document.close();
+}
+
 function irParaPropostaDoModal(){
   if(!MRES_LOTE)return;
   const lote=MRES_LOTE;
@@ -955,8 +1197,12 @@ function nextP(n){
 function filterLP(){const q=V('lq'),pm=parseFloat(V('lp'))||Infinity,am=parseFloat(V('la'))||0,lst=LS.filter(l=>l.status==='Disponivel'&&(!q||l.q===q)&&l.e156<=pm&&l.area>=am),g=document.getElementById('lcards');g.innerHTML='';lst.slice(0,60).forEach(l=>{const s=LS2&&LS2.q===l.q&&LS2.l===l.l,d=document.createElement('div');d.className='lcard'+(s?' sel':'');d.innerHTML=`<div style="font-size:13px;font-weight:600">Q${l.q} · Lote ${l.l}</div><div style="font-size:11px;color:var(--text3)">${l.tipo} · ${l.area.toFixed(2)} m²</div><div style="font-size:13px;color:var(--blue);margin-top:5px;font-weight:600">${BR(l.e156)}/mês <span style="font-size:11px;color:var(--text3)">(156×)</span></div><div style="font-size:11px;color:var(--text3)">Total: ${BR(l.preco)}</div>`;d.onclick=()=>{LS2=l;filterLP();document.getElementById('lsel').style.display='block';document.getElementById('lsel').innerHTML=`<div class="alert as">✓ Q${l.q}/L${l.l} selecionado — ${BR(l.preco)}</div>`;document.getElementById('btnp1').disabled=false;};g.appendChild(d);});if(!lst.length)g.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:12px;grid-column:1/-1">Nenhum lote disponível.</div>';}
 function selP(p){PR=p;[144,156,180].forEach(x=>document.getElementById('pc'+x).classList.toggle('sel',x===p));document.getElementById('fpz').textContent=p;calcF();}
 function calcF(){if(!LS2)return;const en=parseFloat((V('vent')||'0').replace(/[^\d,.]/g,'').replace(',','.'))||0,pct=parseFloat(V('vcomis'))||0,comis=LS2.preco*(pct/100),pliq=LS2.preco-comis,saldo=Math.max(0,pliq-en),parc=PR>0?saldo/PR:0;document.getElementById('fpr').textContent=BR(LS2.preco);document.getElementById('fpct').textContent=pct||0;document.getElementById('fcomis').textContent=pct>0?BR(comis):'—';document.getElementById('fpliq').textContent=BR(pliq);document.getElementById('fen').textContent=BR(en);document.getElementById('fsd').textContent=BR(saldo);document.getElementById('fpc').textContent=BR(parc);document.getElementById('ftot').textContent=BR(pliq);[144,156,180].forEach(p=>{const pv=document.getElementById('pv'+p);if(pv)pv.textContent=BR(saldo/p)+'/mês';});}
-function genPrev(){const l=LS2,dt=new Date().toLocaleDateString('pt-BR'),num='PH-'+(500+LF.length+LC.length+1).toString().padStart(6,'0');const ec=V('pec');const hasConj=ec==='Casado(a)'||ec==='União estável';const conj=hasConj?{nome:V('conj-nome'),cpf:V('conj-cpf'),rg:V('conj-rg'),nasc:V('conj-nasc'),prof:V('conj-prof'),nac:V('conj-nac'),regime:V('conj-regime'),dtcas:V('conj-dtcas')}:null;const comisP=parseFloat(V('vcomis'))||0,comisV=l.preco*(comisP/100),pliq=l.preco-comisV,en=parseFloat((V('vent')||'0').replace(/[^\d,.]/g,'').replace(',','.'))||0,saldo=Math.max(0,pliq-en),parc=PR>0?saldo/PR:0,fpag=V('vfpag')||'Boleto bancário';PA={lote:l,prazo:PR,parc,precoLiq:pliq,entrada:V('vent'),dt1:V('vdt'),comissao:comisP,comissaoValor:comisV,formaPagamento:fpag,comprador:V('pn'),cpf:V('pcpf'),rg:V('prg'),nasc:V('pnsc'),nac:V('pnac'),ec:V('pec'),prof:V('ppro'),fone:V('ptel'),email:V('pmail'),end:V('pend'),bairro:V('pbai'),mun:V('pmun'),cep:V('pcep'),corretor:V('cn'),creci:V('cc'),cfone:V('cf'),data:dt,num,conjugue:conj,docs:PA_DOCS.map(d=>({nome:d.nome,tipo:d.tipo,size:d.size}))};const conjRow=hasConj&&conj.nome?`<span style="color:var(--text3)">Cônjuge</span><span>${conj.nome} · CPF: ${conj.cpf}</span>`:'';const comisRow=comisP>0?`<span style="color:var(--text3)">Comissão (${comisP}%)</span><span style="color:var(--amber)">${BR(comisV)}</span>`:'';const fpagRow=`<span style="color:var(--text3)">Forma pgto.</span><span>${fpag}</span>`;document.getElementById('prevprop').innerHTML=`<div style="font-weight:600;font-size:13px;margin-bottom:7px;text-align:center">PROPOSTA · ${dt} · Nº ${num}</div><div style="display:grid;grid-template-columns:auto 1fr;gap:2px 11px;font-size:12px"><span style="color:var(--text3)">Corretor</span><span>${V('cn')||'—'} · CRECI: ${V('cc')||'—'}</span><span style="color:var(--text3)">Comprador</span><span>${V('pn')||'—'} · CPF: ${V('pcpf')||'—'}</span>${conjRow}<span style="color:var(--text3)">Est. Civil</span><span>${ec}</span><span style="color:var(--text3)">Imóvel</span><span>Q${l.q}/L${l.l} · ${l.tipo} · ${l.area.toFixed(2)} m²</span>${comisRow}<span style="color:var(--text3)">Preço líquido</span><span style="font-weight:600">${BR(pliq)}</span><span style="color:var(--text3)">Entrada</span><span>${V('vent')||'R$ 0,00'}</span><span style="color:var(--text3)">Financiamento</span><span>${PR}× de ${BR(parc)} · IGP-M ao 13º mês</span><span style="color:var(--text3)">1ª parcela</span><span>${fD(V('vdt'))}</span>${fpagRow}${PA_DOCS.length?`<span style="color:var(--text3)">Documentos</span><span>${PA_DOCS.length} arquivo(s) anexado(s)</span>`:''}</div>`;}
+function genPrev(){const l=LS2,dt=new Date().toLocaleDateString('pt-BR'),num='PH-'+(500+LF.length+LC.length+1).toString().padStart(6,'0');const ec=V('pec');const hasConj=ec==='Casado(a)'||ec==='União estável';const conj=hasConj?{nome:V('conj-nome'),cpf:V('conj-cpf'),rg:V('conj-rg'),nasc:V('conj-nasc'),prof:V('conj-prof'),nac:V('conj-nac'),regime:V('conj-regime'),dtcas:V('conj-dtcas')}:null;const comisP=parseFloat(V('vcomis'))||0,comisV=l.preco*(comisP/100),pliq=l.preco-comisV,en=parseFloat((V('vent')||'0').replace(/[^\d,.]/g,'').replace(',','.'))||0,saldo=Math.max(0,pliq-en),parc=PR>0?saldo/PR:0,fpag=V('vfpag')||'Boleto bancário';PA={lote:l,prazo:PR,parc,precoLiq:pliq,entrada:V('vent'),dt1:V('vdt'),comissao:comisP,comissaoValor:comisV,formaPagamento:fpag,comprador:V('pn'),cpf:V('pcpf'),rg:V('prg'),nasc:V('pnsc'),nac:V('pnac'),ec:V('pec'),prof:V('ppro'),fone:V('ptel'),email:V('pmail'),end:V('pend'),bairro:V('pbai'),mun:V('pmun'),cep:V('pcep'),corretor:V('cn'),creci:V('cc'),cfone:V('cf'),data:dt,num,conjugue:conj,docs:PA_DOCS.map(d=>({nome:d.nome,tipo:d.tipo,size:d.size,url:d.url||'',ref:d.ref||''}))};const conjRow=hasConj&&conj.nome?`<span style="color:var(--text3)">Cônjuge</span><span>${conj.nome} · CPF: ${conj.cpf}</span>`:'';const comisRow=comisP>0?`<span style="color:var(--text3)">Comissão (${comisP}%)</span><span style="color:var(--amber)">${BR(comisV)}</span>`:'';const fpagRow=`<span style="color:var(--text3)">Forma pgto.</span><span>${fpag}</span>`;document.getElementById('prevprop').innerHTML=`<div style="font-weight:600;font-size:13px;margin-bottom:7px;text-align:center">PROPOSTA · ${dt} · Nº ${num}</div><div style="display:grid;grid-template-columns:auto 1fr;gap:2px 11px;font-size:12px"><span style="color:var(--text3)">Corretor</span><span>${V('cn')||'—'} · CRECI: ${V('cc')||'—'}</span><span style="color:var(--text3)">Comprador</span><span>${V('pn')||'—'} · CPF: ${V('pcpf')||'—'}</span>${conjRow}<span style="color:var(--text3)">Est. Civil</span><span>${ec}</span><span style="color:var(--text3)">Imóvel</span><span>Q${l.q}/L${l.l} · ${l.tipo} · ${l.area.toFixed(2)} m²</span>${comisRow}<span style="color:var(--text3)">Preço líquido</span><span style="font-weight:600">${BR(pliq)}</span><span style="color:var(--text3)">Entrada</span><span>${V('vent')||'R$ 0,00'}</span><span style="color:var(--text3)">Financiamento</span><span>${PR}× de ${BR(parc)} · IGP-M ao 13º mês</span><span style="color:var(--text3)">1ª parcela</span><span>${fD(V('vdt'))}</span>${fpagRow}${PA_DOCS.length?`<span style="color:var(--text3)">Documentos</span><span>${PA_DOCS.length} arquivo(s) anexado(s)</span>`:''}</div>`;}
 function submitProp(){
+  const uploading=PA_DOCS.filter(d=>d.uploading);
+  if(uploading.length){alert(`Aguarde: ${uploading.length} arquivo(s) ainda sendo enviado(s).`);return;}
+  /* atualiza docs com URLs finais do Cloudinary */
+  PA.docs=PA_DOCS.map(d=>({nome:d.nome,tipo:d.tipo,size:d.size,url:d.url||'',ref:d.ref||''}));
   const l=PA.lote;
   /* congela preço do lote no momento da proposta */
   const lx=LS.find(x=>x.q===l.q&&x.l===l.l);
@@ -966,6 +1212,7 @@ function submitProp(){
   localStorage.setItem('ph_reservas_ativas',JSON.stringify(_rv2));
   chSt(l.q,l.l,'Reservado',`Proposta ${PA.num}`);
   LF.push({...PA,status:'aguardando',ts:new Date().toISOString()});
+  salvarDocsLocalStorage(PA.num);
   save();
   const pending=LF.filter(f=>f.status==='aguardando'||f.status==='aguardando_dir').length;
   const bf=document.getElementById('bf');if(bf){bf.style.display=pending>0?'inline':'none';bf.textContent=pending;}
@@ -1384,16 +1631,25 @@ function renderFila(){const el=document.getElementById('filabody');if(!LF.length
 
 /* ── CONTRATOS ── */
 function clearCtrFilters(){['ctr-fst','ctr-fq'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});['ctr-fcorr','ctr-fcli'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});renderCtr();}
-function renderCtr(){const el=document.getElementById('ctrbody');const s=gS();const isCorr=s&&s.perfil==='corretor';const fSt=(document.getElementById('ctr-fst')||{}).value||'';const fCorr=((document.getElementById('ctr-fcorr')||{}).value||'').toLowerCase();const fCli=((document.getElementById('ctr-fcli')||{}).value||'').toLowerCase();const fQ=(document.getElementById('ctr-fq')||{}).value||'';let base=isCorr?LC.filter(c=>c.corretor===s.nome):LC;const lista=base.filter(c=>{if(fSt){const st=c.status==='distratado'?'distratado':'aprovado';if(st!==fSt)return false;}if(fCorr&&!(c.corretor||'').toLowerCase().includes(fCorr))return false;if(fCli&&!(c.comprador||'').toLowerCase().includes(fCli))return false;if(fQ&&c.lote&&String(c.lote.q)!==String(fQ))return false;return true;});const cntEl=document.getElementById('ctr-cnt');if(cntEl)cntEl.textContent=lista.length+' contrato(s)';if(!lista.length){el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado.</div>';return;}el.innerHTML='';lista.forEach(c=>{const l=c.lote;const isDist=c.status==='distratado';const statusPill=isDist?'<span class="pill pa">Distratado</span>':c.baixado?'<span class="pill pb">Baixado</span>':'<span class="pill pg">Aprovado</span>';const distBtn=(!isCorr&&!isDist)?`<button class="btn bsm btn-d" onclick='openDist(${JSON.stringify(c)})' style="font-size:10px">Distrato</button>`:'';const pdfBtn=`<button class="btn bsm" onclick='dlContratoX(${JSON.stringify(c)})'>⬇ PDF</button>`;const btns=`<div style="display:flex;gap:5px;align-items:center">${distBtn}${pdfBtn}</div>`;const distInfo=isDist?`<div style="font-size:10px;color:var(--red);margin-top:2px">Distratado em ${new Date(c.distratoEm).toLocaleDateString('pt-BR')} · ${c.distratoMotivo||''}</div>`:'';const baixadoInfo=(!isDist&&c.baixado)?`<div style="font-size:10px;color:var(--text3);margin-top:2px">Contrato baixado em ${new Date(c.baixadoEm).toLocaleDateString('pt-BR')}</div>`:'';el.innerHTML+=`<div style="border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:13px;font-weight:600">${c.num} ${statusPill}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Q${l.q}/L${l.l} · ${l.area.toFixed(2)} m² · ${BR(l.preco)}</div><div style="font-size:11px;color:var(--text3)">${c.comprador||'—'} · ${c.prazo}× de ${BR(c.parc)} · Aprov. por ${c.resp||'—'}</div>${distInfo}${baixadoInfo}</div>${btns}</div>`;});}
+function renderCtr(){const el=document.getElementById('ctrbody');const s=gS();const isCorr=s&&s.perfil==='corretor';const fSt=(document.getElementById('ctr-fst')||{}).value||'';const fCorr=((document.getElementById('ctr-fcorr')||{}).value||'').toLowerCase();const fCli=((document.getElementById('ctr-fcli')||{}).value||'').toLowerCase();const fQ=(document.getElementById('ctr-fq')||{}).value||'';let base=isCorr?LC.filter(c=>c.corretor===s.nome):LC;const lista=base.filter(c=>{if(fSt){const st=c.status==='distratado'?'distratado':'aprovado';if(st!==fSt)return false;}if(fCorr&&!(c.corretor||'').toLowerCase().includes(fCorr))return false;if(fCli&&!(c.comprador||'').toLowerCase().includes(fCli))return false;if(fQ&&c.lote&&String(c.lote.q)!==String(fQ))return false;return true;});const cntEl=document.getElementById('ctr-cnt');if(cntEl)cntEl.textContent=lista.length+' contrato(s)';if(!lista.length){el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado.</div>';return;}el.innerHTML='';lista.forEach(c=>{const l=c.lote;const isDist=c.status==='distratado';const statusPill=isDist?'<span class="pill pa">Distratado</span>':c.baixado?'<span class="pill pb">Baixado</span>':'<span class="pill pg">Aprovado</span>';const distBtn=(!isCorr&&!isDist)?`<button class="btn bsm btn-d" onclick='openDist(${JSON.stringify(c)})' style="font-size:10px">Distrato</button>`:'';const pdfBtn=`<button class="btn bsm" onclick='dlContratoX(${JSON.stringify(c)})'>⬇ PDF</button>`;const fixDocUrl=u=>{if(!u)return u;if(u.includes('/raw/upload/'))return u;return u.replace(/\/(image|video|auto)\/upload\//,'/image/upload/fl_attachment/');};const docsArr=(c.docs||[]).filter(d=>d.url).map(d=>({...d,url:fixDocUrl(d.url)}));const docsN=docsArr.length;const btns=`<div style="display:flex;gap:5px;align-items:center">${distBtn}${pdfBtn}</div>`;const distInfo=isDist?`<div style="font-size:10px;color:var(--red);margin-top:2px">Distratado em ${new Date(c.distratoEm).toLocaleDateString('pt-BR')} · ${c.distratoMotivo||''}</div>`:'';const baixadoInfo=(!isDist&&c.baixado)?`<div style="font-size:10px;color:var(--text3);margin-top:2px">Contrato baixado em ${new Date(c.baixadoEm).toLocaleDateString('pt-BR')}</div>`:'';const docsSection=`<div style="margin-top:9px;border-top:1px solid var(--border);padding-top:8px"><div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px">&#128206; Documentos Anexos ${docsN>0?`<span style="font-weight:400;color:var(--text3)">(${docsN})</span>`:''}</div>${docsN>0?docsArr.map(d=>`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-radius:var(--rs);padding:4px 8px;margin-bottom:3px;font-size:11px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px">&#128441; ${d.nome} <span style="color:var(--text3)">(${d.size?(d.size/1024).toFixed(0)+' KB':'—'})</span></span><a href="${d.url}" target="_blank" class="btn bsm" style="padding:2px 8px;font-size:10px;flex-shrink:0">Ver</a></div>`).join(''):`<div style="font-size:11px;color:var(--red)">&#9888; Nenhum documento anexado</div>`}</div>`;el.innerHTML+=`<div style="border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;margin-bottom:7px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:13px;font-weight:600">${c.num} ${statusPill}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Q${l.q}/L${l.l} · ${l.area.toFixed(2)} m² · ${BR(l.preco)}</div><div style="font-size:11px;color:var(--text3)">${c.comprador||'—'} · ${c.prazo}× de ${BR(c.parc)} · Aprov. por ${c.resp||'—'}</div>${distInfo}${baixadoInfo}</div>${btns}</div>${docsSection}</div>`;});}
 
 /* ── GESTÃO DE PREÇOS ── */
+function pmPopulaLotes(){
+  const q=document.getElementById('pm-quadra').value;
+  const sel=document.getElementById('pm-lote');
+  if(!q){sel.innerHTML='<option value="">Todos</option>';return;}
+  const nums=[...new Set(LS.filter(l=>l.q===q).map(l=>l.l))].sort((a,b)=>a-b);
+  sel.innerHTML='<option value="">Todos os lotes</option>'+nums.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
 function updatePrecoQuadra(){
   const q=document.getElementById('pm-quadra').value;
+  const loteNum=document.getElementById('pm-lote').value;
   const vlm2=parseFloat(document.getElementById('pm-vlm2').value);
   const res=document.getElementById('pm-result');
   if(!q||isNaN(vlm2)||vlm2<=0){alert('Selecione a quadra e informe um valor válido.');return;}
-  if(!confirm(`Aplicar R$ ${vlm2.toFixed(2)}/m² a todos os lotes DISPONÍVEIS da Quadra ${q}?\nLotes Reservados e Em Proposta mantêm o preço congelado.`))return;
-  const lotes=LS.filter(l=>l.q===q&&l.status==='Disponivel');
+  const alvo=loteNum?`Lote ${loteNum} da Quadra ${q}`:`todos os lotes DISPONÍVEIS da Quadra ${q}`;
+  if(!confirm(`Aplicar R$ ${vlm2.toFixed(2)}/m² a ${alvo}?\nLotes Reservados e Em Proposta mantêm o preço congelado.`))return;
+  const lotes=LS.filter(l=>l.q===q&&l.status==='Disponivel'&&(!loteNum||String(l.l)===String(loteNum)));
   let n=0;
   lotes.forEach(l=>{
     l.vlm2=vlm2;
@@ -1414,7 +1670,8 @@ function updatePrecoQuadra(){
   else last.v=allAvg;
   localStorage.setItem('ph_pricehistory',JSON.stringify(hist));
   save();
-  res.style.display='block';res.innerHTML=`<div class="alert as">✓ ${n} lote(s) da Quadra ${q} atualizados para ${BR(vlm2)}/m². Lotes reservados/em proposta mantiveram preço congelado.</div>`;
+  const loteLabel=loteNum?` (Lote ${loteNum})`:'';
+  res.style.display='block';res.innerHTML=`<div class="alert as">✓ ${n} lote(s) da Quadra ${q}${loteLabel} atualizados para ${BR(vlm2)}/m². Lotes reservados/em proposta mantiveram preço congelado.</div>`;
   if(document.getElementById('pg-disp').classList.contains('active'))renderDisp();
 }
 /* ── INADIMPLÊNCIA ── */
@@ -1468,11 +1725,63 @@ function confirmDist(){if(!DISTCTR)return;const resp=V('dist-resp'),motivo=V('di
 // ── Conjugue ─────────────────────────────────────────────────────────────
 function toggleConjuge(){const ec=V('pec');document.getElementById('conjugue-section').style.display=(ec==='Casado(a)'||ec==='União estável')?'block':'none';}
 
-// ── Documentos (upload) ───────────────────────────────────────────────────
+// ── Documentos (upload via Cloudinary) ───────────────────────────────────
+const CDN_CLOUD='dlgrpq42a';
+const CDN_PRESET='ml_default';
 let PA_DOCS=[];
-function addDocs(inp){Array.from(inp.files).forEach(f=>{if(f.size>5*1024*1024){alert(`Arquivo "${f.name}" excede 5 MB.`);return;}const rd=new FileReader();rd.onload=e=>{PA_DOCS.push({nome:f.name,tipo:f.type,size:f.size,base64:e.target.result});renderDocList();};rd.readAsDataURL(f);});inp.value='';}
+function addDocs(inp){
+  Array.from(inp.files).forEach(f=>{
+    if(f.size>10*1024*1024){alert(`"${f.name}" excede 10 MB.`);return;}
+    const idx=PA_DOCS.length;
+    PA_DOCS.push({nome:f.name,tipo:f.type,size:f.size,url:null,uploading:true,pct:0});
+    renderDocList();
+    const fd=new FormData();
+    fd.append('file',f);
+    fd.append('upload_preset',CDN_PRESET);
+    fd.append('folder','docs_propostas');
+    fd.append('resource_type','raw');
+    const xhr=new XMLHttpRequest();
+    xhr.open('POST',`https://api.cloudinary.com/v1_1/${CDN_CLOUD}/raw/upload`);
+    xhr.upload.onprogress=e=>{if(e.lengthComputable){PA_DOCS[idx].pct=Math.round(e.loaded/e.total*100);renderDocList();}};
+    xhr.onload=()=>{
+      if(xhr.status===200){
+        const res=JSON.parse(xhr.responseText);
+        PA_DOCS[idx].url=res.secure_url;PA_DOCS[idx].ref=res.public_id;PA_DOCS[idx].uploading=false;
+      }else{
+        let msg='Erro';try{const e=JSON.parse(xhr.responseText);msg='Erro: '+(e.error&&e.error.message||xhr.status);}catch{}
+        PA_DOCS[idx].uploading=false;PA_DOCS[idx].erro=true;PA_DOCS[idx].erroMsg=msg;
+      }
+      renderDocList();
+    };
+    xhr.onerror=()=>{PA_DOCS[idx].uploading=false;PA_DOCS[idx].erro=true;renderDocList();};
+    xhr.send(fd);
+  });
+  inp.value='';
+}
 function removeDoc(i){PA_DOCS.splice(i,1);renderDocList();}
-function renderDocList(){const el=document.getElementById('docs-list');if(!el)return;el.innerHTML=PA_DOCS.map((d,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-radius:var(--rs);padding:5px 9px;font-size:12px"><span>&#128206; ${d.nome} <span style="color:var(--text3)">(${(d.size/1024).toFixed(0)} KB)</span></span><button class="btn bsm" style="padding:2px 7px;color:var(--red)" onclick="removeDoc(${i})">&#10005;</button></div>`).join('');}
+function renderDocList(){
+  const el=document.getElementById('docs-list');if(!el)return;
+  el.innerHTML=PA_DOCS.map((d,i)=>{
+    const kb=(d.size/1024).toFixed(0);
+    const status=d.erro?`<span style="color:var(--red)" title="${d.erroMsg||'Erro'}">${d.erroMsg||'Erro'}</span>`:d.uploading?`<span style="color:var(--amber)">⬆ ${d.pct||0}%</span>`:'<span style="color:var(--green)">✓ Enviado</span>';
+    const verBtn=d.url?`<a href="${d.url}" target="_blank" class="btn bsm" style="padding:2px 7px">&#128065; Ver</a>`:'';
+    return`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-radius:var(--rs);padding:5px 9px;font-size:12px"><span>&#128206; ${d.nome} <span style="color:var(--text3)">(${kb} KB)</span> ${status}</span><div style="display:flex;gap:5px">${verBtn}<button class="btn bsm" style="padding:2px 7px;color:var(--red)" onclick="removeDoc(${i})">&#10005;</button></div></div>`;
+  }).join('');
+}
+function salvarDocsLocalStorage(num){
+  /* mantém cópia local como fallback */
+  try{const meta=PA_DOCS.map(d=>({nome:d.nome,tipo:d.tipo,size:d.size,url:d.url||'',ref:d.ref||''}));localStorage.setItem('ph_docs_'+num,JSON.stringify(meta));}catch(e){}
+}
+function getDocsLocalStorage(num){try{return JSON.parse(localStorage.getItem('ph_docs_'+num)||'[]');}catch{return[];}}
+function verDocsContrato(num){
+  const docs=getDocsLocalStorage(num).filter(d=>d.url);
+  if(!docs.length){alert('Documentos não disponíveis localmente.');return;}
+  docs.forEach(d=>{window.open(d.url,'_blank');});
+}
+function abrirDocsContrato(docs){
+  if(!docs||!docs.length){alert('Nenhum documento disponível.');return;}
+  docs.forEach(d=>{if(d.url)window.open(d.url,'_blank');});
+}
 
 // ── Máscaras e validação ──────────────────────────────────────────────────
 function maskCPF(el){let v=el.value.replace(/\D/g,'').substring(0,11);v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');el.value=v;}
