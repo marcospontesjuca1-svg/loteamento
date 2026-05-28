@@ -1730,7 +1730,7 @@ function confirmDist(){if(!DISTCTR)return;const resp=V('dist-resp'),motivo=V('di
 function toggleConjuge(){const ec=V('pec');document.getElementById('conjugue-section').style.display=(ec==='Casado(a)'||ec==='União estável')?'block':'none';}
 
 // ── Documentos (upload via Cloudinary) ───────────────────────────────────
-function openDocPdf(url){const w=window.open('about:blank','_blank');if(!w){alert('Permita popups para este site para visualizar PDFs.');return;}w.document.write('<html><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666">Carregando PDF…</body></html>');const isPdf=buf=>{const s=new Uint8Array(buf,0,4);return s[0]===0x25&&s[1]===0x50&&s[2]===0x44&&s[3]===0x46;};const show=buf=>{const blob=new Blob([buf],{type:'application/pdf'});const bUrl=URL.createObjectURL(blob);w.location.replace(bUrl);};fetch(url).then(r=>r.arrayBuffer()).then(buf=>{if(isPdf(buf)){show(buf);return;}const u2=url.replace(/\/upload\//,'/upload/f_pdf/').replace(/\.pdf$/i,'');fetch(u2).then(r2=>r2.arrayBuffer()).then(buf2=>{if(isPdf(buf2)){show(buf2);}else{w.close();alert('Este PDF foi enviado antes de uma atualização. Por favor, reenvie o documento.');}}).catch(()=>{w.close();});}).catch(()=>{w.location.replace('https://docs.google.com/viewer?url='+encodeURIComponent(url));});}
+function openDocPdf(url){const u=url.includes('/raw/upload/')?url:url.replace(/\/(image|video|auto)\/upload\//,'/image/upload/f_pdf/').replace(/\.pdf$/i,'');window.open(u,'_blank');}
 const CDN_CLOUD='dlgrpq42a';
 const CDN_PRESET='ml_default';
 let PA_DOCS=[];
