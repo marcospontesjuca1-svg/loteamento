@@ -1730,7 +1730,7 @@ function confirmDist(){if(!DISTCTR)return;const resp=V('dist-resp'),motivo=V('di
 function toggleConjuge(){const ec=V('pec');document.getElementById('conjugue-section').style.display=(ec==='Casado(a)'||ec==='União estável')?'block':'none';}
 
 // ── Documentos (upload via Cloudinary) ───────────────────────────────────
-function openDocPdf(url){fetch(url).then(r=>r.arrayBuffer()).then(buf=>{const b=new Blob([buf],{type:'application/pdf'});window.open(URL.createObjectURL(b),'_blank');}).catch(()=>{window.open('https://docs.google.com/viewer?url='+encodeURIComponent(url),'_blank');});}
+function openDocPdf(url){const tryShow=buf=>{const s=new Uint8Array(buf.slice(0,4));return s[0]===0x25&&s[1]===0x50&&s[2]===0x44&&s[3]===0x46;};fetch(url).then(r=>r.arrayBuffer()).then(buf=>{if(tryShow(buf)){window.open(URL.createObjectURL(new Blob([buf],{type:'application/pdf'})),'_blank');return;}const u2=url.replace(/\/upload\//,'/upload/f_pdf/').replace(/\.pdf$/i,'');fetch(u2).then(r2=>r2.arrayBuffer()).then(buf2=>{if(tryShow(buf2)){window.open(URL.createObjectURL(new Blob([buf2],{type:'application/pdf'})),'_blank');}else{alert('Este PDF foi enviado antes de uma atualização do sistema e não pode ser visualizado.\nPor favor, reenvie o documento.');}}).catch(()=>{alert('Não foi possível carregar o PDF. Reenvie o documento.');});}).catch(()=>{window.open('https://docs.google.com/viewer?url='+encodeURIComponent(url),'_blank');});}
 const CDN_CLOUD='dlgrpq42a';
 const CDN_PRESET='ml_default';
 let PA_DOCS=[];
