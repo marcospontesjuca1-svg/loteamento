@@ -2,7 +2,7 @@ require('dotenv').config();
 const sql    = require('mssql');
 const admin  = require('firebase-admin');
 const cron   = require('node-cron');
-const path   = require('path');
+const https  = require('https');
 
 // ── Firebase Admin ────────────────────────────────────────────────────────────
 const serviceAccount = require('./serviceaccount.json');
@@ -10,7 +10,7 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 const db = admin.firestore();
-db.settings({ databaseId: 'swsdb' });
+db.settings({ databaseId: 'sws-import' });
 
 // ── SQL Server ────────────────────────────────────────────────────────────────
 const sqlConfig = {
@@ -29,18 +29,19 @@ const BDWIND  = process.env.DB_BDWIND  || 'BDWind';
 const SCRWIND = process.env.DB_SCRWIND || 'SCRWind';
 const DEBUG   = process.env.DEBUG === 'true';
 
+// ── GitHub (export JSON estático) ────────────────────────────────────────────
+const GH_TOKEN = process.env.GH_TOKEN  || '';
+const GH_OWNER = process.env.GH_OWNER  || 'marcospontesjuca1-svg';
+const GH_REPO  = process.env.GH_REPO   || 'loteamento';
+const GH_PATH  = 'data/contas-receber.json';
+
 // ── Definição das coleções ────────────────────────────────────────────────────
-// Cada entrada define:
-//   collection : nome da coleção no Firestore
-//   db         : banco SQL Server a usar
-//   sql        : query SQL  (substitua pelas views/tabelas reais do SWS)
-//   keyField   : campo que vira ID do documento no Firestore
 const COLECOES = [
   {
     collection: 'posicao_contas_receber',
     database:   SCRWIND,
     keyField:   'CODTIT',
-    // ── AJUSTE A QUERY ABAIXO com as tabelas reais do SWS ──────────────────
+    exportJson: true,   // ← este será exportado para o GitHub Pages
     sql: `
       SELECT
         CODTIT,
@@ -176,21 +177,29 @@ const COLECOES = [
 function log(msg)  { console.log(`[${new Date().toLocaleString('pt-BR')}] ${msg}`); }
 function warn(msg) { console.warn(`[${new Date().toLocaleString('pt-BR')}] ⚠ ${msg}`); }
 
-// Grava um array de registros em uma coleção Firestore usando batched writes
+// Grava array de registros em coleção Firestore usando batched writes
 async function gravaColecao(colName, registros, keyField) {
   if (!registros.length) { log(`  ${colName}: 0 registros, nada a gravar.`); return; }
 
-  const colRef = db.collection(colName);
-  const BATCH_SIZE = 400; // Firestore limita 500 operações por batch
-  let gravados = 0;
+  // Grava no sub-caminho sql_exports/<colName>/rows para manter compatibilidade
+  const parentRef = db.collection('sql_exports').doc(colName);
+  await parentRef.set({
+    collection_name: colName,
+    database_id:     'sws-import',
+    row_count:       registros.length,
+    synced_at_utc:   new Date().toISOString()
+  });
 
-  for (let i = 0; i < registros.length; i += BATCH_SIZE) {
-    const lote = registros.slice(i, i + BATCH_SIZE);
+  const colRef  = parentRef.collection('rows');
+  const BATCH   = 400;
+  let gravados  = 0;
+
+  for (let i = 0; i < registros.length; i += BATCH) {
+    const lote = registros.slice(i, i + BATCH);
     const batch = db.batch();
     for (const reg of lote) {
       const id  = String(reg[keyField] ?? `doc_${i}_${Math.random()}`);
       const doc = colRef.doc(id);
-      // Converte campos null em string vazia e números em tipo correto
       const data = {};
       for (const [k, v] of Object.entries(reg)) {
         data[k] = v === null || v === undefined ? '' : v;
@@ -201,7 +210,88 @@ async function gravaColecao(colName, registros, keyField) {
     await batch.commit();
     gravados += lote.length;
   }
-  log(`  ✓ ${colName}: ${gravados} registros gravados`);
+  log(`  ✓ ${colName}: ${gravados} registros gravados no Firestore`);
+}
+
+// Faz PUT do arquivo JSON no GitHub via REST API
+function githubPutFile(path, content, message) {
+  return new Promise(async (resolve, reject) => {
+    if (!GH_TOKEN) { warn('GH_TOKEN não configurado — pulando export JSON'); resolve(); return; }
+
+    const body64 = Buffer.from(content, 'utf8').toString('base64');
+
+    // Busca SHA atual do arquivo (necessário para update)
+    let sha = '';
+    try {
+      const existing = await githubGet(`/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`);
+      sha = existing.sha || '';
+    } catch (_) { /* arquivo não existe ainda, sha vazio = criação */ }
+
+    const payload = JSON.stringify({ message, content: body64, ...(sha ? { sha } : {}) });
+    const options = {
+      hostname: 'api.github.com',
+      path:     `/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`,
+      method:   'PUT',
+      headers: {
+        'Authorization': `Bearer ${GH_TOKEN}`,
+        'Content-Type':  'application/json',
+        'User-Agent':    'sws-sync-script',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    };
+    const req = https.request(options, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) resolve(JSON.parse(data));
+        else reject(new Error(`GitHub API ${res.statusCode}: ${data}`));
+      });
+    });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
+function githubGet(path) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'api.github.com',
+      path,
+      method:   'GET',
+      headers: { 'Authorization': `Bearer ${GH_TOKEN}`, 'User-Agent': 'sws-sync-script' }
+    };
+    const req = https.request(options, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) resolve(JSON.parse(data));
+        else reject(new Error(`GitHub API ${res.statusCode}`));
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+// Exporta os dados de CR para um JSON estático no GitHub Pages
+async function exportarJsonGitHub(colName, registros) {
+  if (!GH_TOKEN) {
+    warn(`Export JSON desativado (GH_TOKEN ausente). Configure em .env para ativar.`);
+    return;
+  }
+  try {
+    const payload = JSON.stringify({
+      exportedAt: new Date().toISOString(),
+      count:      registros.length,
+      rows:       registros
+    });
+    const msg = `data: atualiza ${colName} (${registros.length} registros) [skip ci]`;
+    await githubPutFile(GH_PATH, payload, msg);
+    log(`  ✓ JSON exportado → https://${GH_OWNER}.github.io/${GH_REPO}/data/contas-receber.json`);
+  } catch (err) {
+    warn(`Falha no export JSON: ${err.message}`);
+  }
 }
 
 // ── Sincronização principal ───────────────────────────────────────────────────
@@ -219,16 +309,20 @@ async function sincronizar() {
         const rows = result.recordset;
         log(`  ${col.collection}: ${rows.length} linhas do SQL Server`);
         await gravaColecao(col.collection, rows, col.keyField);
+
+        // Exporta JSON estático para GitHub Pages (apenas coleção marcada)
+        if (col.exportJson) {
+          await exportarJsonGitHub(col.collection, rows);
+        }
       } catch (err) {
         warn(`Erro em [${col.collection}]: ${err.message}`);
       }
     }
 
-    // Atualiza timestamp de última sincronização
     await db.collection('_meta').doc('sync').set({
-      ultimaSync:   new Date().toISOString(),
-      status:       'ok',
-      colecoes:     COLECOES.map(c => c.collection)
+      ultimaSync: new Date().toISOString(),
+      status:     'ok',
+      colecoes:   COLECOES.map(c => c.collection)
     });
 
     log('━━━ Sincronização concluída ━━━\n');
@@ -243,10 +337,8 @@ async function sincronizar() {
 const runOnce = process.argv.includes('--once');
 
 if (runOnce) {
-  // node sync-sws.js --once  →  executa uma vez e encerra
   sincronizar().then(() => process.exit(0)).catch(e => { warn(e); process.exit(1); });
 } else {
-  // Executa imediatamente ao iniciar, depois segue o agendamento
   sincronizar();
   const schedule = process.env.CRON_SCHEDULE || '0 * * * *';
   log(`Agendamento ativo: "${schedule}"  (próxima execução automática)`);

@@ -1192,7 +1192,7 @@ function nextP(n){
   }
   if(n===4)genPrev();PS=n;showPP(n);
 }
-function filterLP(){const q=V('lq'),pm=parseFloat(V('lp'))||Infinity,am=parseFloat(V('la'))||0,lst=LS.filter(l=>l.status==='Disponivel'&&(!q||l.q===q)&&l.e156<=pm&&l.area>=am),g=document.getElementById('lcards');g.innerHTML='';lst.slice(0,60).forEach(l=>{const s=LS2&&LS2.q===l.q&&LS2.l===l.l,d=document.createElement('div');d.className='lcard'+(s?' sel':'');d.innerHTML=`<div style="font-size:13px;font-weight:600">Q${l.q} · Lote ${l.l}</div><div style="font-size:11px;color:var(--text3)">${l.tipo} · ${l.area.toFixed(2)} m²</div><div style="font-size:13px;color:var(--blue);margin-top:5px;font-weight:600">${BR(l.e156)}/mês <span style="font-size:11px;color:var(--text3)">(156×)</span></div><div style="font-size:11px;color:var(--text3)">Total: ${BR(l.preco)}</div>`;d.onclick=()=>{LS2=l;filterLP();document.getElementById('lsel').style.display='block';document.getElementById('lsel').innerHTML=`<div class="alert as">✓ Q${l.q}/L${l.l} selecionado — ${BR(l.preco)}</div>`;document.getElementById('btnp1').disabled=false;};g.appendChild(d);});if(!lst.length)g.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:12px;grid-column:1/-1">Nenhum lote disponível.</div>';}
+function filterLP(){if(!LS||!LS.length)return;const q=V('lq'),pm=parseFloat(V('lp'))||Infinity,am=parseFloat(V('la'))||0,lst=LS.filter(l=>l.status==='Disponivel'&&(!q||l.q===q)&&l.e156<=pm&&l.area>=am),g=document.getElementById('lcards');g.innerHTML='';lst.slice(0,60).forEach(l=>{const s=LS2&&LS2.q===l.q&&LS2.l===l.l,d=document.createElement('div');d.className='lcard'+(s?' sel':'');d.innerHTML=`<div style="font-size:13px;font-weight:600">Q${l.q} · Lote ${l.l}</div><div style="font-size:11px;color:var(--text3)">${l.tipo} · ${l.area.toFixed(2)} m²</div><div style="font-size:13px;color:var(--blue);margin-top:5px;font-weight:600">${BR(l.e156)}/mês <span style="font-size:11px;color:var(--text3)">(156×)</span></div><div style="font-size:11px;color:var(--text3)">Total: ${BR(l.preco)}</div>`;d.onclick=()=>{LS2=l;filterLP();document.getElementById('lsel').style.display='block';document.getElementById('lsel').innerHTML=`<div class="alert as">✓ Q${l.q}/L${l.l} selecionado — ${BR(l.preco)}</div>`;document.getElementById('btnp1').disabled=false;};g.appendChild(d);});if(!lst.length)g.innerHTML='<div style="padding:1rem;color:var(--text3);font-size:12px;grid-column:1/-1">Nenhum lote disponível.</div>';}
 function selP(p){PR=p;[144,156,180].forEach(x=>document.getElementById('pc'+x).classList.toggle('sel',x===p));document.getElementById('fpz').textContent=p;calcF();}
 function calcF(){if(!LS2)return;const en=parseFloat((V('vent')||'0').replace(/[^\d,.]/g,'').replace(',','.'))||0,pct=parseFloat(V('vcomis'))||0,comis=LS2.preco*(pct/100),pliq=LS2.preco-comis,saldo=Math.max(0,pliq-en),parc=PR>0?saldo/PR:0;document.getElementById('fpr').textContent=BR(LS2.preco);document.getElementById('fpct').textContent=pct||0;document.getElementById('fcomis').textContent=pct>0?BR(comis):'—';document.getElementById('fpliq').textContent=BR(pliq);document.getElementById('fen').textContent=BR(en);document.getElementById('fsd').textContent=BR(saldo);document.getElementById('fpc').textContent=BR(parc);document.getElementById('ftot').textContent=BR(pliq);[144,156,180].forEach(p=>{const pv=document.getElementById('pv'+p);if(pv)pv.textContent=BR(saldo/p)+'/mês';});}
 function genPrev(){const l=LS2,dt=new Date().toLocaleDateString('pt-BR'),num='PH-'+(500+LF.length+LC.length+1).toString().padStart(6,'0');const ec=V('pec');const hasConj=ec==='Casado(a)'||ec==='União estável';const conj=hasConj?{nome:V('conj-nome'),cpf:V('conj-cpf'),rg:V('conj-rg'),nasc:V('conj-nasc'),prof:V('conj-prof'),nac:V('conj-nac'),regime:V('conj-regime'),dtcas:V('conj-dtcas')}:null;const comisP=parseFloat(V('vcomis'))||0,comisV=l.preco*(comisP/100),pliq=l.preco-comisV,en=parseFloat((V('vent')||'0').replace(/[^\d,.]/g,'').replace(',','.'))||0,saldo=Math.max(0,pliq-en),parc=PR>0?saldo/PR:0,fpag=V('vfpag')||'Boleto bancário';PA={lote:l,prazo:PR,parc,precoLiq:pliq,entrada:V('vent'),dt1:V('vdt'),comissao:comisP,comissaoValor:comisV,formaPagamento:fpag,comprador:V('pn'),cpf:V('pcpf'),rg:V('prg'),nasc:V('pnsc'),nac:V('pnac'),ec:V('pec'),prof:V('ppro'),fone:V('ptel'),email:V('pmail'),end:V('pend'),bairro:V('pbai'),mun:V('pmun'),cep:V('pcep'),corretor:V('cn'),creci:V('cc'),cfone:V('cf'),data:dt,num,conjugue:conj,docs:PA_DOCS.map(d=>({nome:d.nome,tipo:d.tipo,size:d.size,url:d.url||'',ref:d.ref||''}))};const conjRow=hasConj&&conj.nome?`<span style="color:var(--text3)">Cônjuge</span><span>${conj.nome} · CPF: ${conj.cpf}</span>`:'';const comisRow=comisP>0?`<span style="color:var(--text3)">Comissão (${comisP}%)</span><span style="color:var(--amber)">${BR(comisV)}</span>`:'';const fpagRow=`<span style="color:var(--text3)">Forma pgto.</span><span>${fpag}</span>`;document.getElementById('prevprop').innerHTML=`<div style="font-weight:600;font-size:13px;margin-bottom:7px;text-align:center">PROPOSTA · ${dt} · Nº ${num}</div><div style="display:grid;grid-template-columns:auto 1fr;gap:2px 11px;font-size:12px"><span style="color:var(--text3)">Corretor</span><span>${V('cn')||'—'} · CRECI: ${V('cc')||'—'}</span><span style="color:var(--text3)">Comprador</span><span>${V('pn')||'—'} · CPF: ${V('pcpf')||'—'}</span>${conjRow}<span style="color:var(--text3)">Est. Civil</span><span>${ec}</span><span style="color:var(--text3)">Imóvel</span><span>Q${l.q}/L${l.l} · ${l.tipo} · ${l.area.toFixed(2)} m²</span>${comisRow}<span style="color:var(--text3)">Preço líquido</span><span style="font-weight:600">${BR(pliq)}</span><span style="color:var(--text3)">Entrada</span><span>${V('vent')||'R$ 0,00'}</span><span style="color:var(--text3)">Financiamento</span><span>${PR}× de ${BR(parc)} · IGP-M ao 13º mês</span><span style="color:var(--text3)">1ª parcela</span><span>${fD(V('vdt'))}</span>${fpagRow}${PA_DOCS.length?`<span style="color:var(--text3)">Documentos</span><span>${PA_DOCS.length} arquivo(s) anexado(s)</span>`:''}</div>`;}
@@ -1802,46 +1802,61 @@ window.addEventListener('load',()=>{const s=gS();if(s){showApp(s);if(s.perfil!==
 </script>
 <script>
 (async function loadSWS(){
+  const STATIC_URL='https://marcospontesjuca1-svg.github.io/loteamento/data/contas-receber.json';
   const BASE='https://firestore.googleapis.com/v1/projects/sws-import/databases/sws-import/documents/sql_exports/clientes_com_contas_receber/rows';
   const KEY='AIzaSyCRnUok-dPAsYNTRlavvaVlO3FSwJElt5w';
   const CACHE_KEY='sws_cr_v1';
   const CACHE_TTL=4*60*60*1000;
+  function push(docs){if(typeof window.onCRSnapshot==='function')window.onCRSnapshot(docs);}
   function decode(doc){const id=doc.name.split('/').pop();const f={};for(const[k,v]of Object.entries(doc.fields||{})){if(v.stringValue!==undefined)f[k]=v.stringValue;else if(v.integerValue!==undefined)f[k]=Number(v.integerValue);else if(v.doubleValue!==undefined)f[k]=v.doubleValue;else if(v.booleanValue!==undefined)f[k]=v.booleanValue;else f[k]=null;}return{id,...f};}
-  // Usa cache se disponível e recente
+  // 1) Cache local recente
   try{
     const c=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
     if(c&&Date.now()-c.ts<CACHE_TTL){
-      console.log('[SWS] cache: '+c.docs.length+' registros ('+new Date(c.ts).toLocaleTimeString('pt-BR')+')');
-      if(typeof window.onCRSnapshot==='function')window.onCRSnapshot(c.docs);
-      return;
+      console.log('[SWS] cache local: '+c.docs.length+' reg ('+new Date(c.ts).toLocaleTimeString('pt-BR')+')');
+      push(c.docs);return;
     }
   }catch(e){}
-  // Busca da API com retry
+  // 2) Arquivo JSON estático gerado pelo script de sync
+  try{
+    const r=await fetch(STATIC_URL+'?t='+Date.now());
+    if(r.ok){
+      const d=await r.json();
+      if(d.rows&&d.rows.length){
+        console.log('[SWS] JSON estático: '+d.rows.length+' reg ('+d.exportedAt+')');
+        try{localStorage.setItem(CACHE_KEY,JSON.stringify({ts:Date.now(),docs:d.rows}));}catch(e){}
+        push(d.rows);return;
+      }
+    }
+  }catch(e){console.log('[SWS] JSON estático indisponível, tentando Firestore...');}
+  // 3) Firestore REST API (fallback — sujeito a quota)
   async function fetchPage(url,tries=6){
     for(let i=0;i<tries;i++){
       const r=await fetch(url);
-      if(r.status===429){const w=5000*Math.pow(2,i);console.log('[SWS] aguardando '+Math.round(w/1000)+'s...');await new Promise(res=>setTimeout(res,w));continue;}
+      if(r.status===429){const w=5000*Math.pow(2,i);console.log('[SWS] aguardando '+Math.round(w/1000)+'s (quota)...');await new Promise(res=>setTimeout(res,w));continue;}
       return r;
     }
     return null;
   }
   try{
     let all=[],token='';
-    console.log('[SWS] buscando dados...');
+    console.log('[SWS] buscando dados Firestore...');
     do{
       const url=BASE+'?key='+KEY+'&pageSize=300'+(token?'&pageToken='+token:'');
       const r=await fetchPage(url);
-      if(!r||!r.ok){console.error('[SWS] falha:',r?r.status:'timeout');break;}
+      if(!r||!r.ok){console.error('[SWS] falha Firestore:',r?r.status:'timeout');break;}
       const d=await r.json();
       all=all.concat((d.documents||[]).map(decode));
       token=d.nextPageToken||'';
       console.log('[SWS] carregados:',all.length);
-      if(all.length===300&&typeof window.onCRSnapshot==='function')window.onCRSnapshot(all);
+      if(all.length===300)push(all);
       if(token)await new Promise(res=>setTimeout(res,4000));
     }while(token);
-    console.log('[SWS] total:',all.length,'registros');
-    try{localStorage.setItem(CACHE_KEY,JSON.stringify({ts:Date.now(),docs:all}));}catch(e){console.warn('[SWS] cache nao salvo:',e.message);}
-    if(typeof window.onCRSnapshot==='function')window.onCRSnapshot(all);
+    if(all.length){
+      console.log('[SWS] total Firestore:',all.length,'registros');
+      try{localStorage.setItem(CACHE_KEY,JSON.stringify({ts:Date.now(),docs:all}));}catch(e){console.warn('[SWS] cache nao salvo:',e.message);}
+      push(all);
+    }
   }catch(e){console.error('[SWS] erro:',e.message);}
 })();
 </script>
