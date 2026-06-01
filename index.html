@@ -1801,11 +1801,12 @@ window.addEventListener('load',()=>{const s=gS();if(s){showApp(s);if(s.perfil!==
 </script>
 <script type="module">
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import{getFirestore,collection,onSnapshot}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import{getFirestore,collection,doc,onSnapshot}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 const SWS={apiKey:'AIzaSyCRnUok-dPAsYNTRlavvaVlO3FSwJElt5w',authDomain:'sws-import.firebaseapp.com',projectId:'sws-import',storageBucket:'sws-import.firebasestorage.app',messagingSenderId:'25827759737',appId:'1:25827759737:web:ed574c26db43dbf7cd66a8'};
 const swsApp=initializeApp(SWS,'sws');
-const dbSWS=getFirestore(swsApp,'swsdb');
-onSnapshot(collection(dbSWS,'clientes_com_contas_receber'),snap=>{
+const dbSWS=getFirestore(swsApp);
+const rowsRef=collection(dbSWS,'sql_exports','clientes_com_contas_receber','rows');
+onSnapshot(rowsRef,snap=>{
   if(typeof window.onCRSnapshot==='function')window.onCRSnapshot(snap.docs.map(d=>({id:d.id,...d.data()})));
 },err=>console.warn('SWS:',err));
 </script>
