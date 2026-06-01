@@ -1822,11 +1822,13 @@ window.addEventListener('load',()=>{const s=gS();if(s){showApp(s);if(s.perfil!==
     do{
       const url=BASE+'?key='+KEY+'&pageSize=300'+(token?'&pageToken='+token:'');
       const r=await fetch(url);
+      if(r.status===429){console.log('[SWS] aguardando quota...');await new Promise(res=>setTimeout(res,2000));continue;}
       if(!r.ok){console.error('[SWS] erro HTTP:',r.status,await r.text());return;}
       const d=await r.json();
       all=all.concat((d.documents||[]).map(decode));
       token=d.nextPageToken||'';
       console.log('[SWS] carregados:',all.length);
+      if(token)await new Promise(res=>setTimeout(res,400));
     }while(token);
     console.log('[SWS] total:',all.length,'registros');
     if(typeof window.onCRSnapshot==='function')window.onCRSnapshot(all);
