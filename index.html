@@ -778,6 +778,7 @@ function sp(id){if(window.innerWidth<=768){const sb=document.querySelector('.sid
 
 /* ── DASHBOARD ── */
 function renderDash(){
+  if(!LS||!LS.length)return;
   document.getElementById('ddata').textContent=hoje();
   const Vl=LS.filter(l=>l.status==='Vendido'),D=LS.filter(l=>l.status==='Disponivel'),B=LS.filter(l=>l.status==='Bloqueado'),R=LS.filter(l=>l.status==='Reservado'),T=LS.length;
   const vv=Vl.reduce((a,l)=>a+l.preco,0),vd=D.reduce((a,l)=>a+l.preco,0),vt=LS.reduce((a,l)=>a+l.preco,0),vr=R.reduce((a,l)=>a+l.preco,0),vb=B.reduce((a,l)=>a+l.preco,0);
