@@ -422,6 +422,7 @@ tr:hover td{background:var(--bg)}
   <div class="tbar"><div class="tt">Pipeline de Vendas — Kanban</div><button class="btn bsm btn-p" onclick="renderKanban()">↻ Atualizar</button></div>
   <div style="padding:18px 22px">
     <div id="kb-motivo-modal" class="mo"><div class="mb" style="width:420px"><div class="mt">Informar motivo de reprovação</div><div class="fi" style="margin-bottom:11px"><label>Motivo *</label><textarea id="kb-motivo-txt" rows="3" placeholder="Descreva o motivo..."></textarea></div><div id="kb-motivo-meta" style="display:none"></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="closeKbMotivo()">Cancelar</button><button class="btn btn-d" onclick="confirmKbReprovar()">Reprovar</button></div></div></div>
+    <div id="kb-ver-modal" class="mo"><div class="mb" style="width:520px;max-height:80vh;overflow-y:auto"><div class="mt">Visualizar Proposta</div><div id="kb-ver-body" style="font-size:13px"></div><div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn" onclick="document.getElementById('kb-ver-modal').style.display='none'">Fechar</button></div></div></div>
     <div class="kb-wrap" id="kb-wrap">
       <div class="kb-col kb-col-ger"><div class="kb-head"><span>⟐ Gerência</span><span id="kb-cnt-ger" class="nbadge" style="display:none;background:var(--blue-bg);color:var(--blue)">0</span></div><div class="kb-body" id="kb-ger"></div></div>
       <div class="kb-col kb-col-dir"><div class="kb-head"><span>◈ Diretoria</span><span id="kb-cnt-dir" class="nbadge" style="display:none;background:var(--amber-bg);color:var(--amber)">0</span></div><div class="kb-body" id="kb-dir"></div></div>
@@ -1562,7 +1563,7 @@ function renderKanban(){
     const apBtn=canApr?`<button class="btn bsm btn-s" onclick="kbAprovar('${col}','${f.num}')">✓ Aprovar</button>`:'';
     const rpBtn=canApr?`<button class="btn bsm btn-d" onclick="kbReprovar('${col}','${f.num}')">✕ Reprovar</button>`:'';
     const motivo=f.motivoReprovacao?`<div style="font-size:10px;color:var(--red);margin-top:3px">Motivo: ${f.motivoReprovacao}</div>`:'';
-    return`<div class="kb-card"><div class="kb-num">${f.num||f.num||'—'}</div><div class="kb-buyer">${f.comprador||'—'}</div><div class="kb-lot">Q${l.q}/L${l.l} · ${f.corretor||'—'}</div><div class="kb-price">${BR(l.preco||0)} · ${f.prazo}×</div>${motivo}<div class="kb-actions">${apBtn}${rpBtn}</div></div>`;
+    return`<div class="kb-card"><div class="kb-num">${f.num||'—'}</div><div class="kb-buyer">${f.comprador||'—'}</div><div class="kb-lot">Q${l.q}/L${l.l} · ${f.corretor||'—'}</div><div class="kb-price">${BR(l.preco||0)} · ${f.prazo}×</div>${motivo}<div class="kb-actions"><button class="btn bsm" onclick="kbVerProposta('${f.num}')" style="background:var(--surface2);border-color:var(--border)">👁 Ver</button>${apBtn}${rpBtn}</div></div>`;
   }
   function finCard(c){
     const l=c.lote||{};
@@ -1580,6 +1581,41 @@ function renderKanban(){
   /* atualiza badge sidebar */
   const tot=gerItems.length+dirItems.length;
   const bf=document.getElementById('bf');if(bf){bf.style.display=tot>0?'inline':'none';bf.textContent=tot;}
+}
+function kbVerProposta(num){
+  const f=LF.find(x=>x.num===num);
+  if(!f)return;
+  const l=f.lote||{};
+  const R=v=>v!=null&&v!==''?v:'—';
+  const M=v=>v?BR(parseFloat(String(v).replace(/[^\d,.]/g,'').replace(',','.'))||0):'—';
+  const hasConj=f.conjugue&&f.conjugue.nome;
+  const conjHTML=hasConj?`<tr><td style="color:var(--text3);padding:3px 8px 3px 0">Cônjuge</td><td style="padding:3px 0">${R(f.conjugue.nome)} · CPF: ${R(f.conjugue.cpf)}</td></tr>`:'';
+  const comisHTML=f.comissao>0?`<tr><td style="color:var(--text3);padding:3px 8px 3px 0">Comissão (${f.comissao}%)</td><td style="padding:3px 0;color:var(--amber)">${BR(f.comissaoValor||0)}</td></tr>`:'';
+  document.getElementById('kb-ver-body').innerHTML=`
+    <div style="font-weight:600;text-align:center;margin-bottom:12px;color:var(--text1)">PROPOSTA ${R(f.num)} · ${R(f.data)}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <tr><td colspan="2" style="background:var(--surface2);padding:5px 8px;font-weight:600;font-size:11px;color:var(--text3);border-radius:4px;margin-bottom:4px">COMPRADOR</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">Nome</td><td style="padding:3px 0;font-weight:600">${R(f.comprador)}</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">CPF</td><td style="padding:3px 0">${R(f.cpf)}</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">Estado Civil</td><td style="padding:3px 0">${R(f.ec)}</td></tr>
+      ${conjHTML}
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">Fone</td><td style="padding:3px 0">${R(f.fone)}</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">E-mail</td><td style="padding:3px 0">${R(f.email)}</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">Endereço</td><td style="padding:3px 0">${R(f.end)}${f.bairro?', '+f.bairro:''} — ${R(f.mun)}</td></tr>
+      <tr><td colspan="2" style="background:var(--surface2);padding:5px 8px;font-weight:600;font-size:11px;color:var(--text3);border-radius:4px;padding-top:10px">IMÓVEL &amp; FINANCEIRO</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">Lote</td><td style="padding:3px 0;font-weight:600">Q${l.q}/L${l.l} · ${l.tipo||'—'} · ${l.area?l.area.toFixed(2)+' m²':'—'}</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">Preço total</td><td style="padding:3px 0">${BR(l.preco||0)}</td></tr>
+      ${comisHTML}
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">Preço líquido</td><td style="padding:3px 0;font-weight:600">${BR(f.precoLiq||l.preco||0)}</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">Entrada</td><td style="padding:3px 0">${M(f.entrada)}</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">Financiamento</td><td style="padding:3px 0">${f.prazo}× de ${BR(f.parc||0)} · IGP-M ao 13º mês</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">1ª parcela</td><td style="padding:3px 0">${R(f.dt1)}</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">Forma pgto.</td><td style="padding:3px 0">${R(f.formaPagamento)}</td></tr>
+      <tr><td colspan="2" style="background:var(--surface2);padding:5px 8px;font-weight:600;font-size:11px;color:var(--text3);border-radius:4px;padding-top:10px">CORRETOR</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">Nome</td><td style="padding:3px 0">${R(f.corretor)}</td></tr>
+      <tr><td style="color:var(--text3);padding:3px 8px 3px 0">CRECI</td><td style="padding:3px 0">${R(f.creci)}</td></tr>
+    </table>`;
+  document.getElementById('kb-ver-modal').style.display='flex';
 }
 function kbAprovar(col,num){
   const idx=LF.findIndex(f=>f.num===num);
