@@ -753,7 +753,7 @@ let LS=null,LH=[],LF=[],LC=[];
   LF=JSON.parse(localStorage.getItem('ph_fila')||'[]');
   LC=JSON.parse(localStorage.getItem('ph_ctr')||'[]');
   LCA=JSON.parse(localStorage.getItem('ph_clientes')||'[]');
-    if(localStorage.getItem('ph_v')!=='2026v2'){LS=LI.map(l=>({...l,obs:l.obs||''}));LH=[];LF=[];LC=[];localStorage.setItem('ph_v','2026v2');save();}else if(!LS){LS=LI.map(l=>({...l,obs:''}));save();}else if(!_hadFs){save();}
+    if(localStorage.getItem('ph_v')!=='2026v2'){LS=LI.map(l=>({...l,obs:l.obs||''}));if(!_hadFs){LH=[];LF=[];LC=[];}localStorage.setItem('ph_v','2026v2');save();}else if(!LS){LS=LI.map(l=>({...l,obs:''}));save();}else if(!_hadFs){save();}
   document.getElementById('fb-loading').style.display='none';
   db.collection('dados').doc('main').onSnapshot(snap=>{
     if(!snap.exists)return;
