@@ -665,9 +665,11 @@ function doLogout(){sessionStorage.removeItem(AK);document.getElementById('ls').
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('ls').style.display!=='none')doLogin();});
 let LS=null,LH=[],LF=[],LC=[];
 (async()=>{
+  let _hadFs=false,_fsOffline=false;
   try{
     const snap=await db.collection('dados').doc('main').get();
     if(snap.exists){
+      _hadFs=true;
       const d=snap.data();
       if(d.lotes)localStorage.setItem('ph_lotes',JSON.stringify(d.lotes));
       if(d.hist)localStorage.setItem('ph_hist',JSON.stringify(d.hist));
@@ -677,14 +679,13 @@ let LS=null,LH=[],LF=[],LC=[];
       if(d.usuarios)localStorage.setItem(UK,JSON.stringify(d.usuarios));
       if(d.corretores)localStorage.setItem(CK,JSON.stringify(d.corretores));
     }
-  }catch(e){console.warn('Firebase offline, usando cache local:',e);}
-  const _hadFs=await db.collection('dados').doc('main').get().then(s=>s.exists).catch(()=>false);
+  }catch(e){console.warn('Firebase offline, usando cache local:',e);_fsOffline=true;}
   LS=JSON.parse(localStorage.getItem('ph_lotes')||'null');
   LH=JSON.parse(localStorage.getItem('ph_hist')||'[]');
   LF=JSON.parse(localStorage.getItem('ph_fila')||'[]');
   LC=JSON.parse(localStorage.getItem('ph_ctr')||'[]');
   LCA=JSON.parse(localStorage.getItem('ph_clientes')||'[]');
-  if(!LS){LS=LI.map(l=>({...l,obs:''}));save();}else if(!_hadFs){save();}
+  if(!LS){LS=LI.map(l=>({...l,obs:''}));if(!_fsOffline)save();}else if(!_hadFs&&!_fsOffline){save();}
   document.getElementById('fb-loading').style.display='none';
   db.collection('dados').doc('main').onSnapshot(snap=>{
     if(!snap.exists)return;
@@ -695,7 +696,7 @@ let LS=null,LH=[],LF=[],LC=[];
     if(d.fila&&JSON.stringify(d.fila)!==JSON.stringify(LF)){LF.length=0;d.fila.forEach(x=>LF.push(x));ch=true;}
     if(d.ctr&&JSON.stringify(d.ctr)!==JSON.stringify(LC)){LC.length=0;d.ctr.forEach(x=>LC.push(x));ch=true;}
     if(d.clientes&&JSON.stringify(d.clientes)!==JSON.stringify(LCA)){LCA.length=0;d.clientes.forEach(x=>LCA.push(x));ch=true;}
-    if(d.usuarios)saveUsers(d.usuarios);
+    if(d.usuarios)localStorage.setItem(UK,JSON.stringify(d.usuarios));
     if(d.corretores)localStorage.setItem(CK,JSON.stringify(d.corretores));
     if(ch&&document.getElementById('app').style.display!=='none'){const s=gS();if(s&&s.perfil!=='corretor')renderDash();}
   },{error:e=>console.warn('Snapshot:',e)});
@@ -1516,7 +1517,7 @@ function newUser(){const n=prompt('Nome:');if(!n)return;const e=prompt('E-mail:'
 function editUser(id){const us=gU(),u=us.find(x=>x.id===id);if(!u)return;const n=prompt('Nome:',u.nome);if(n===null)return;const pf=prompt('Perfil (admin/gerente/usuario/corretor):',u.perfil);if(!['admin','gerente','usuario','corretor'].includes(pf)){alert('Perfil inválido. Use: admin, gerente, usuario ou corretor');return;}const p=prompt('Nova senha (vazio = manter):');u.nome=n||u.nome;u.perfil=pf;if(p&&p.length>=6)u.senha=btoa(p);saveUsers(us);renderUsers();}
 function togUser(id){const us=gU(),u=us.find(x=>x.id===id);if(!u)return;u.ativo=!u.ativo;saveUsers(us);renderUsers();}
 function expBkp(){const pl={versao:'1.2',data:new Date().toISOString(),empreendimento:'Portal do Horizonte',lotes:LS,fila:LF,contratos:LC,historico:LH,usuarios:gU(),corretores:gCorretores()};dlFile(JSON.stringify(pl,null,2),`backup_portal_${new Date().toISOString().split('T')[0]}.json`,'application/json;charset=utf-8');}
-function restBkp(inp){const f=inp.files[0];if(!f)return;if(!confirm('Substituir TODOS os dados?')){inp.value='';return;}const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(!d.versao||!d.lotes){alert('Arquivo inválido.');return;}localStorage.setItem('ph_lotes',JSON.stringify(d.lotes));localStorage.setItem('ph_fila',JSON.stringify(d.fila||[]));localStorage.setItem('ph_ctr',JSON.stringify(d.contratos||[]));localStorage.setItem('ph_hist',JSON.stringify(d.historico||[]));if(d.usuarios)saveUsers(d.usuarios);if(d.corretores)saveCorretores(d.corretores);LS.length=0;d.lotes.forEach(l=>LS.push(l));LF.length=0;(d.fila||[]).forEach(x=>LF.push(x));LC.length=0;(d.contratos||[]).forEach(x=>LC.push(x));LH.length=0;(d.historico||[]).forEach(x=>LH.push(x));save();alert(`✓ Backup restaurado! ${d.lotes.length} lotes · ${new Date(d.data).toLocaleString('pt-BR')}`);renderCfg();}catch(err){alert('Erro: '+err.message);}};r.readAsText(f);inp.value='';}
+function restBkp(inp){const f=inp.files[0];if(!f)return;if(!confirm('Substituir TODOS os dados?')){inp.value='';return;}const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(!d.versao||!d.lotes){alert('Arquivo inválido.');return;}localStorage.setItem('ph_lotes',JSON.stringify(d.lotes));localStorage.setItem('ph_fila',JSON.stringify(d.fila||[]));localStorage.setItem('ph_ctr',JSON.stringify(d.contratos||[]));localStorage.setItem('ph_hist',JSON.stringify(d.historico||[]));LS.length=0;d.lotes.forEach(l=>LS.push(l));LF.length=0;(d.fila||[]).forEach(x=>LF.push(x));LC.length=0;(d.contratos||[]).forEach(x=>LC.push(x));LH.length=0;(d.historico||[]).forEach(x=>LH.push(x));if(d.clientes){LCA.length=0;(d.clientes||[]).forEach(x=>LCA.push(x));}save();if(d.usuarios)saveUsers(d.usuarios);if(d.corretores)saveCorretores(d.corretores);alert(`✓ Backup restaurado! ${d.lotes.length} lotes · ${new Date(d.data).toLocaleString('pt-BR')}`);renderCfg();}catch(err){alert('Erro: '+err.message);}};r.readAsText(f);inp.value='';}
 
 /* ── UTILS ── */
 function dlFile(c,n,t){const b=new Blob([c],{type:t}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click();URL.revokeObjectURL(a.href);}
