@@ -446,6 +446,8 @@ tr:hover td{background:var(--bg)}
   <div style="padding:18px 22px">
     <div class="fbar">
       <div class="fi"><label>Status</label><select id="ctr-fst" onchange="renderCtr()"><option value="">Todos</option><option value="aprovado">Aprovado</option><option value="distratado">Distratado</option></select></div>
+      <div class="fi"><label>Período de</label><input type="date" id="ctr-fde" onchange="renderCtr()" style="font-size:12px;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--rs);background:var(--surface);color:var(--text)"></div>
+      <div class="fi"><label>até</label><input type="date" id="ctr-fat" onchange="renderCtr()" style="font-size:12px;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--rs);background:var(--surface);color:var(--text)"></div>
       <div class="fi"><label>Corretor</label><input id="ctr-fcorr" placeholder="Nome do corretor…" oninput="renderCtr()" style="font-size:12px;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--rs);background:var(--surface);color:var(--text)"></div>
       <div class="fi"><label>Cliente</label><input id="ctr-fcli" placeholder="Nome do cliente…" oninput="renderCtr()" style="font-size:12px;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--rs);background:var(--surface);color:var(--text)"></div>
       <div class="fi"><label>Quadra</label><select id="ctr-fq" onchange="renderCtr()"><option value="">Todas</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>15</option><option>16</option><option>17</option><option>18</option><option>001</option><option>002</option></select></div>
@@ -507,8 +509,7 @@ tr:hover td{background:var(--bg)}
     <div class="kgrid" id="cr-kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px"></div>
     <div class="fbar" style="margin-bottom:12px">
       <div class="fi" style="min-width:220px"><label>Cliente</label><select id="cr-combo" onchange="renderCR()" style="font-size:12px;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--rs);background:var(--surface);color:var(--text)"><option value="">Todos os clientes</option></select></div>
-      <div class="fi" style="min-width:120px"><label>Busca livre</label><input id="cr-fcli" placeholder="Nome, doc…" oninput="renderCR()"></div>
-      <div class="fi"><label>Status</label><select id="cr-fst" onchange="renderCR()"><option value="">Todos</option><option value="aberto">Em aberto</option><option value="vencido">Vencido</option><option value="quitado">Quitado</option></select></div>
+      <div class="fi"><label>Status</label><select id="cr-fst" onchange="renderCR()"><option value="">Todos</option><option value="aberto">Em aberto</option><option value="vencido">Vencido</option><option value="quitado">Quitado</option><option value="sem_quitacao">Sem Quitação</option></select></div>
       <div class="fi"><label>Venc. de</label><input type="date" id="cr-fde" onchange="renderCR()"></div>
       <div class="fi"><label>até</label><input type="date" id="cr-fat" onchange="renderCR()"></div>
       <button class="btn bsm" onclick="clearCRFilters()" style="align-self:flex-end">✕ Limpar</button>
@@ -1494,32 +1495,46 @@ function renderCR(){
 
   const data=getCRData();
   const cliSel=(document.getElementById('cr-combo')||{}).value||'';
-  const fcli=((document.getElementById('cr-fcli')||{}).value||'').toLowerCase();
   const fst=(document.getElementById('cr-fst')||{}).value||'';
   const fde=(document.getElementById('cr-fde')||{}).value||'';
   const fat=(document.getElementById('cr-fat')||{}).value||'';
   const hoje=new Date();hoje.setHours(0,0,0,0);
-  const lst=data.filter(r=>{
-    const st=crStatus(r);
-    const nomeCli=String(r[CR_FIELDS.nome]||r.NOMECLI||r.nome||r.NomeCliente||'').trim();
-    const codCli=String(r[CR_FIELDS.cod]||r.CODCLI||r.codigo||'').trim();
-    if(cliSel&&nomeCli!==cliSel)return false;
-    if(fcli&&!nomeCli.toLowerCase().includes(fcli)&&!codCli.includes(fcli)&&!(r[CR_FIELDS.doc]||r.NUMDOC||'').toString().includes(fcli))return false;
-    if(fst&&st!==fst)return false;
-    const _vc=r[CR_FIELDS.venc]||r.DTVENC||'';
-    if(fde&&_vc<fde)return false;
-    if(fat&&_vc>fat)return false;
-    return true;
-  });
+
+  // Filtro "Sem Quitação": clientes sem nenhum quitado no período
+  let lst;
+  if(fst==='sem_quitacao'){
+    const periodoData=data.filter(r=>{
+      const _vc=r[CR_FIELDS.venc]||r.DTVENC||'';
+      const nomeCli=String(r[CR_FIELDS.nome]||r.NOMECLI||'').trim();
+      if(cliSel&&nomeCli!==cliSel)return false;
+      if(fde&&_vc<fde)return false;
+      if(fat&&_vc>fat)return false;
+      return true;
+    });
+    const codComQuit=new Set(periodoData.filter(r=>crStatus(r)==='quitado').map(r=>String(r[CR_FIELDS.cod]||r.CODCLI||'')));
+    const codsSemQuit=new Set(periodoData.map(r=>String(r[CR_FIELDS.cod]||r.CODCLI||'')).filter(c=>c&&!codComQuit.has(c)));
+    lst=periodoData.filter(r=>codsSemQuit.has(String(r[CR_FIELDS.cod]||r.CODCLI||'')));
+  }else{
+    lst=data.filter(r=>{
+      const st=crStatus(r);
+      const nomeCli=String(r[CR_FIELDS.nome]||r.NOMECLI||r.nome||r.NomeCliente||'').trim();
+      if(cliSel&&nomeCli!==cliSel)return false;
+      if(fst&&st!==fst)return false;
+      const _vc=r[CR_FIELDS.venc]||r.DTVENC||'';
+      if(fde&&_vc<fde)return false;
+      if(fat&&_vc>fat)return false;
+      return true;
+    });
+  }
   const cnt=document.getElementById('cr-cnt');if(cnt)cnt.textContent=lst.length+' título(s)';
-  /* KPIs */
+  /* KPIs — calculados sobre a lista filtrada */
   const crVal=(r)=>parseFloat(r[CR_FIELDS.saldo]??r.SALDO??r[CR_FIELDS.valor]??r.VALOR??0);
   const crVenc=(r)=>r[CR_FIELDS.venc]||r.DTVENC||'';
   const totRec=lst.filter(r=>crStatus(r)!=='quitado').reduce((s,r)=>s+crVal(r),0);
   const totVenc=lst.filter(r=>crStatus(r)==='vencido').reduce((s,r)=>s+crVal(r),0);
   const mesAtual=hoje.getMonth(),anoAtual=hoje.getFullYear();
   const aVencer=lst.filter(r=>{const vc=crVenc(r);if(!vc)return false;const v=new Date(vc+'T00:00:00');return crStatus(r)==='aberto'&&v.getMonth()===mesAtual&&v.getFullYear()===anoAtual;}).reduce((s,r)=>s+crVal(r),0);
-  const recMes=data.filter(r=>{const vc=crVenc(r);if(!vc)return false;const v=new Date(vc+'T00:00:00');return crStatus(r)==='quitado'&&v.getMonth()===mesAtual&&v.getFullYear()===anoAtual;}).reduce((s,r)=>s+(parseFloat(r[CR_FIELDS.valor]??r.VALOR??0)),0);
+  const recMes=lst.filter(r=>{const vc=crVenc(r);if(!vc)return false;const v=new Date(vc+'T00:00:00');return crStatus(r)==='quitado'&&v.getMonth()===mesAtual&&v.getFullYear()===anoAtual;}).reduce((s,r)=>s+(parseFloat(r[CR_FIELDS.valor]??r.VALOR??0)),0);
   const kpiEl=document.getElementById('cr-kpis');
   if(kpiEl)kpiEl.innerHTML=`<div class="kpi" style="border-left:3px solid var(--blue)"><div class="kl">Total a receber</div><div class="kv" style="font-size:16px;color:var(--blue)">${BR(totRec)}</div><div class="ks">${lst.filter(r=>crStatus(r)!=='quitado').length} título(s) em aberto</div></div><div class="kpi" style="border-left:3px solid var(--red)"><div class="kl">Vencido</div><div class="kv" style="font-size:16px;color:var(--red)">${BR(totVenc)}</div><div class="ks">${lst.filter(r=>crStatus(r)==='vencido').length} título(s) vencido(s)</div></div><div class="kpi" style="border-left:3px solid var(--amber)"><div class="kl">A vencer este mês</div><div class="kv" style="font-size:16px;color:var(--amber)">${BR(aVencer)}</div><div class="ks">vencimento em ${new Date(hoje.getFullYear(),hoje.getMonth()+1,0).toLocaleDateString('pt-BR',{month:'long'})}</div></div><div class="kpi" style="border-left:3px solid var(--green)"><div class="kl">Recebido no mês</div><div class="kv" style="font-size:16px;color:var(--green)">${BR(recMes)}</div><div class="ks">títulos quitados no mês</div></div>`;
   /* Aging */
@@ -1544,7 +1559,7 @@ function renderCR(){
   /* badge */
   const b=document.getElementById('cr-badge');if(b){const hasV=data.some(r=>crStatus(r)==='vencido');b.style.display=hasV?'inline':'none';}
 }
-function clearCRFilters(){['cr-fcli','cr-fde','cr-fat'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});['cr-fst','cr-combo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});renderCR();}
+function clearCRFilters(){['cr-fde','cr-fat'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});['cr-fst','cr-combo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});renderCR();}
 function syncCR(){const el=document.getElementById('cr-sync-label');if(el)el.textContent='Atualizando…';}
 function expCR(){const data=getCRData();const h='Cliente;Código;Documento;Parcela;Emissão;Vencimento;Valor;Saldo;Status;Atraso(dias)';const r=data.map(d=>[d.NOMECLI,d.CODCLI,d.NUMDOC,d.PARCELA,d.DTEMIS,d.DTVENC,(d.VALOR||0).toFixed(2).replace('.',','),(d.SALDO??d.VALOR??0).toFixed(2).replace('.',','),crStatus(d),crDias(d.DTVENC)].join(';'));dlFile('﻿'+[h,...r].join('\n'),'contas_receber_sws.csv','text/csv;charset=utf-8');}
 /* ── CADASTRO DE CLIENTES ── */
@@ -1686,8 +1701,8 @@ function confirmKbReprovar(){
 function renderFila(){const el=document.getElementById('filabody');if(!LF.length){el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3)">Nenhuma proposta na fila.</div>';return;}el.innerHTML='';LF.forEach(f=>{const l=f.lote,pc=f.status==='aprovado'||f.status==='aguardando_dir'?'pg':f.status==='reprovado'?'pa':'pb';const stLabel={aguardando:'Aguardando Gerência',aguardando_dir:'Aguardando Diretoria',aprovado:'Aprovado',reprovado:'Reprovado'}[f.status]||f.status;el.innerHTML+=`<div style="border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:13px;font-weight:600">${f.num} · Q${l.q}/L${l.l}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${f.comprador||'—'} · ${f.corretor||'—'}</div><div style="font-size:11px;color:var(--text3)">${BR(l.preco)} · ${f.prazo}× de ${BR(f.parc)} · ${f.data}</div></div><span class="pill ${pc}">${stLabel}</span></div>`;});}
 
 /* ── CONTRATOS ── */
-function clearCtrFilters(){['ctr-fst','ctr-fq'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});['ctr-fcorr','ctr-fcli'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});renderCtr();}
-function renderCtr(){const el=document.getElementById('ctrbody');const s=gS();const isCorr=s&&s.perfil==='corretor';const fSt=(document.getElementById('ctr-fst')||{}).value||'';const fCorr=((document.getElementById('ctr-fcorr')||{}).value||'').toLowerCase();const fCli=((document.getElementById('ctr-fcli')||{}).value||'').toLowerCase();const fQ=(document.getElementById('ctr-fq')||{}).value||'';let base=isCorr?LC.filter(c=>c.corretor===s.nome):LC;const lista=base.filter(c=>{if(fSt){const st=c.status==='distratado'?'distratado':'aprovado';if(st!==fSt)return false;}if(fCorr&&!(c.corretor||'').toLowerCase().includes(fCorr))return false;if(fCli&&!(c.comprador||'').toLowerCase().includes(fCli))return false;if(fQ&&c.lote&&String(c.lote.q)!==String(fQ))return false;return true;});const cntEl=document.getElementById('ctr-cnt');if(cntEl)cntEl.textContent=lista.length+' contrato(s)';if(!lista.length){el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado.</div>';return;}el.innerHTML='';lista.forEach(c=>{const l=c.lote;const isDist=c.status==='distratado';const statusPill=isDist?'<span class="pill pa">Distratado</span>':c.baixado?'<span class="pill pb">Baixado</span>':'<span class="pill pg">Aprovado</span>';const distBtn=(!isCorr&&!isDist)?`<button class="btn bsm btn-d" onclick='openDist(${JSON.stringify(c)})' style="font-size:10px">Distrato</button>`:'';const pdfBtn=`<button class="btn bsm" onclick='dlContratoX(${JSON.stringify(c)})'>⬇ PDF</button>`;const fixDocUrl=u=>{if(!u)return u;if(u.includes('/raw/upload/'))return u;if(u.split('?')[0].toLowerCase().endsWith('.pdf'))return u;return u.replace(/\/(image|video|auto)\/upload\//,'/image/upload/fl_attachment/');};const docViewUrl=(d,u)=>{if(!u)return u;if((d.nome||'').toLowerCase().endsWith('.pdf')||(d.tipo||'').includes('pdf')){return'https://docs.google.com/viewer?url='+encodeURIComponent(u)+'&embedded=false';}return u;};const docsArr=(c.docs||[]).filter(d=>d.url).map(d=>({...d,url:fixDocUrl(d.url)}));const docsN=docsArr.length;const btns=`<div style="display:flex;gap:5px;align-items:center">${distBtn}${pdfBtn}</div>`;const distInfo=isDist?`<div style="font-size:10px;color:var(--red);margin-top:2px">Distratado em ${new Date(c.distratoEm).toLocaleDateString('pt-BR')} · ${c.distratoMotivo||''}</div>`:'';const baixadoInfo=(!isDist&&c.baixado)?`<div style="font-size:10px;color:var(--text3);margin-top:2px">Contrato baixado em ${new Date(c.baixadoEm).toLocaleDateString('pt-BR')}</div>`:'';const docsSection=`<div style="margin-top:9px;border-top:1px solid var(--border);padding-top:8px"><div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px">&#128206; Documentos Anexos ${docsN>0?`<span style="font-weight:400;color:var(--text3)">(${docsN})</span>`:''}</div>${docsN>0?docsArr.map(d=>`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-radius:var(--rs);padding:4px 8px;margin-bottom:3px;font-size:11px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px">&#128441; ${d.nome} <span style="color:var(--text3)">(${d.size?(d.size/1024).toFixed(0)+' KB':'—'})</span></span>${((d.nome||'').toLowerCase().endsWith('.pdf')||(d.tipo||'').includes('pdf'))?`<button class="btn bsm" style="padding:2px 8px;font-size:10px;flex-shrink:0" onclick="openDocPdf('${d.url}')">Ver</button>`:`<a href="${d.url}" target="_blank" class="btn bsm" style="padding:2px 8px;font-size:10px;flex-shrink:0">Ver</a>`}</div>`).join(''):`<div style="font-size:11px;color:var(--red)">&#9888; Nenhum documento anexado</div>`}</div>`;el.innerHTML+=`<div style="border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;margin-bottom:7px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:13px;font-weight:600">${c.num} ${statusPill}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Q${l.q}/L${l.l} · ${l.area.toFixed(2)} m² · ${BR(l.preco)}</div><div style="font-size:11px;color:var(--text3)">${c.comprador||'—'} · ${c.prazo}× de ${BR(c.parc)} · Aprov. por ${c.resp||'—'}</div>${distInfo}${baixadoInfo}</div>${btns}</div>${docsSection}</div>`;});}
+function clearCtrFilters(){['ctr-fst','ctr-fq'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});['ctr-fcorr','ctr-fcli','ctr-fde','ctr-fat'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});renderCtr();}
+function renderCtr(){const el=document.getElementById('ctrbody');const s=gS();const isCorr=s&&s.perfil==='corretor';const fSt=(document.getElementById('ctr-fst')||{}).value||'';const fDe=(document.getElementById('ctr-fde')||{}).value||'';const fAt=(document.getElementById('ctr-fat')||{}).value||'';const fCorr=((document.getElementById('ctr-fcorr')||{}).value||'').toLowerCase();const fCli=((document.getElementById('ctr-fcli')||{}).value||'').toLowerCase();const fQ=(document.getElementById('ctr-fq')||{}).value||'';let base=isCorr?LC.filter(c=>c.corretor===s.nome):LC;const lista=base.filter(c=>{if(fSt){const st=c.status==='distratado'?'distratado':'aprovado';if(st!==fSt)return false;}if(fDe||fAt){const dtCtr=(c.aprovadoEm||c.data||'').slice(0,10);if(fDe&&dtCtr<fDe)return false;if(fAt&&dtCtr>fAt)return false;}if(fCorr&&!(c.corretor||'').toLowerCase().includes(fCorr))return false;if(fCli&&!(c.comprador||'').toLowerCase().includes(fCli))return false;if(fQ&&c.lote&&String(c.lote.q)!==String(fQ))return false;return true;});const cntEl=document.getElementById('ctr-cnt');if(cntEl)cntEl.textContent=lista.length+' contrato(s)';if(!lista.length){el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3)">Nenhum contrato encontrado.</div>';return;}el.innerHTML='';lista.forEach(c=>{const l=c.lote;const isDist=c.status==='distratado';const statusPill=isDist?'<span class="pill pa">Distratado</span>':c.baixado?'<span class="pill pb">Baixado</span>':'<span class="pill pg">Aprovado</span>';const distBtn=(!isCorr&&!isDist)?`<button class="btn bsm btn-d" onclick='openDist(${JSON.stringify(c)})' style="font-size:10px">Distrato</button>`:'';const pdfBtn=`<button class="btn bsm" onclick='dlContratoX(${JSON.stringify(c)})'>⬇ PDF</button>`;const fixDocUrl=u=>{if(!u)return u;if(u.includes('/raw/upload/'))return u;if(u.split('?')[0].toLowerCase().endsWith('.pdf'))return u;return u.replace(/\/(image|video|auto)\/upload\//,'/image/upload/fl_attachment/');};const docViewUrl=(d,u)=>{if(!u)return u;if((d.nome||'').toLowerCase().endsWith('.pdf')||(d.tipo||'').includes('pdf')){return'https://docs.google.com/viewer?url='+encodeURIComponent(u)+'&embedded=false';}return u;};const docsArr=(c.docs||[]).filter(d=>d.url).map(d=>({...d,url:fixDocUrl(d.url)}));const docsN=docsArr.length;const btns=`<div style="display:flex;gap:5px;align-items:center">${distBtn}${pdfBtn}</div>`;const distInfo=isDist?`<div style="font-size:10px;color:var(--red);margin-top:2px">Distratado em ${new Date(c.distratoEm).toLocaleDateString('pt-BR')} · ${c.distratoMotivo||''}</div>`:'';const baixadoInfo=(!isDist&&c.baixado)?`<div style="font-size:10px;color:var(--text3);margin-top:2px">Contrato baixado em ${new Date(c.baixadoEm).toLocaleDateString('pt-BR')}</div>`:'';const docsSection=`<div style="margin-top:9px;border-top:1px solid var(--border);padding-top:8px"><div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px">&#128206; Documentos Anexos ${docsN>0?`<span style="font-weight:400;color:var(--text3)">(${docsN})</span>`:''}</div>${docsN>0?docsArr.map(d=>`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-radius:var(--rs);padding:4px 8px;margin-bottom:3px;font-size:11px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px">&#128441; ${d.nome} <span style="color:var(--text3)">(${d.size?(d.size/1024).toFixed(0)+' KB':'—'})</span></span>${((d.nome||'').toLowerCase().endsWith('.pdf')||(d.tipo||'').includes('pdf'))?`<button class="btn bsm" style="padding:2px 8px;font-size:10px;flex-shrink:0" onclick="openDocPdf('${d.url}')">Ver</button>`:`<a href="${d.url}" target="_blank" class="btn bsm" style="padding:2px 8px;font-size:10px;flex-shrink:0">Ver</a>`}</div>`).join(''):`<div style="font-size:11px;color:var(--red)">&#9888; Nenhum documento anexado</div>`}</div>`;el.innerHTML+=`<div style="border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;margin-bottom:7px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:13px;font-weight:600">${c.num} ${statusPill}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Q${l.q}/L${l.l} · ${l.area.toFixed(2)} m² · ${BR(l.preco)}</div><div style="font-size:11px;color:var(--text3)">${c.comprador||'—'} · ${c.prazo}× de ${BR(c.parc)} · Aprov. por ${c.resp||'—'}</div>${distInfo}${baixadoInfo}</div>${btns}</div>${docsSection}</div>`;});}
 
 /* ── GESTÃO DE PREÇOS ── */
 function pmPopulaLotes(){
