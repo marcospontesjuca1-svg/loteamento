@@ -764,7 +764,7 @@ let LS=null,LH=[],LF=[],LC=[];
   LF=JSON.parse(localStorage.getItem('ph_fila')||'[]');
   LC=JSON.parse(localStorage.getItem('ph_ctr')||'[]');
   LCA=JSON.parse(localStorage.getItem('ph_clientes')||'[]');
-    if(localStorage.getItem('ph_v')!=='2026v2'){LS=LI.map(l=>({...l,obs:l.obs||''}));if(!_hadFs&&!_fsOffline){LH=[];LF=[];LC=[];}localStorage.setItem('ph_v','2026v2');if(!_fsOffline)save();}else if(!LS){LS=LI.map(l=>({...l,obs:''}));if(!_fsOffline)save();}else if(!_hadFs&&!_fsOffline){save();}
+    if(localStorage.getItem('ph_v')!=='2026v2'){localStorage.setItem('ph_v','2026v2');if(!_hadFs&&!_fsOffline){LS=LI.map(l=>({...l,obs:l.obs||''}));LH=[];LF=[];LC=[];save();}}else if(!LS){LS=LI.map(l=>({...l,obs:''}));if(!_fsOffline)save();}else if(!_hadFs&&!_fsOffline){save();}
   document.getElementById('fb-loading').style.display='none';
   db.collection('dados').doc('main').onSnapshot(snap=>{
     if(!snap.exists)return;
