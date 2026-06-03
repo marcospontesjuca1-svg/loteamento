@@ -1500,20 +1500,23 @@ function renderCR(){
   const fat=(document.getElementById('cr-fat')||{}).value||'';
   const hoje=new Date();hoje.setHours(0,0,0,0);
 
-  // Filtro "Sem Quitação": clientes sem nenhum quitado no período
+  // Filtro "Sem Quitação": títulos vencidos no período, de clientes sem nenhuma quitação no dataset
   let lst;
   if(fst==='sem_quitacao'){
-    const periodoData=data.filter(r=>{
-      const _vc=r[CR_FIELDS.venc]||r.DTVENC||'';
+    // códigos de clientes que TÊM qualquer quitação no dataset completo
+    const codComQuitGlobal=new Set(data.filter(r=>crStatus(r)==='quitado').map(r=>String(r[CR_FIELDS.cod]||r.CODCLI||'')));
+    lst=data.filter(r=>{
+      const st=crStatus(r);
+      if(st!=='vencido')return false; // somente vencidos
+      const cod=String(r[CR_FIELDS.cod]||r.CODCLI||'');
+      if(codComQuitGlobal.has(cod))return false; // exclui quem quitou algo
       const nomeCli=String(r[CR_FIELDS.nome]||r.NOMECLI||'').trim();
       if(cliSel&&nomeCli!==cliSel)return false;
+      const _vc=r[CR_FIELDS.venc]||r.DTVENC||'';
       if(fde&&_vc<fde)return false;
       if(fat&&_vc>fat)return false;
       return true;
     });
-    const codComQuit=new Set(periodoData.filter(r=>crStatus(r)==='quitado').map(r=>String(r[CR_FIELDS.cod]||r.CODCLI||'')));
-    const codsSemQuit=new Set(periodoData.map(r=>String(r[CR_FIELDS.cod]||r.CODCLI||'')).filter(c=>c&&!codComQuit.has(c)));
-    lst=periodoData.filter(r=>codsSemQuit.has(String(r[CR_FIELDS.cod]||r.CODCLI||'')));
   }else{
     lst=data.filter(r=>{
       const st=crStatus(r);
@@ -1534,9 +1537,16 @@ function renderCR(){
   const totVenc=lst.filter(r=>crStatus(r)==='vencido').reduce((s,r)=>s+crVal(r),0);
   const mesAtual=hoje.getMonth(),anoAtual=hoje.getFullYear();
   const aVencer=lst.filter(r=>{const vc=crVenc(r);if(!vc)return false;const v=new Date(vc+'T00:00:00');return crStatus(r)==='aberto'&&v.getMonth()===mesAtual&&v.getFullYear()===anoAtual;}).reduce((s,r)=>s+crVal(r),0);
-  const recMes=lst.filter(r=>{const vc=crVenc(r);if(!vc)return false;const v=new Date(vc+'T00:00:00');return crStatus(r)==='quitado'&&v.getMonth()===mesAtual&&v.getFullYear()===anoAtual;}).reduce((s,r)=>s+(parseFloat(r[CR_FIELDS.valor]??r.VALOR??0)),0);
+  // Recebido: se filtro Quitado ativo, soma todos quitados da lista; senão, só mês atual
+  const lstQuit=lst.filter(r=>crStatus(r)==='quitado');
+  const recMesFiltro=fst==='quitado'||fde||fat;
+  const recMes=recMesFiltro
+    ?lstQuit.reduce((s,r)=>s+(parseFloat(r[CR_FIELDS.valor]??r.VALOR??0)),0)
+    :lst.filter(r=>{const vc=crVenc(r);if(!vc)return false;const v=new Date(vc+'T00:00:00');return crStatus(r)==='quitado'&&v.getMonth()===mesAtual&&v.getFullYear()===anoAtual;}).reduce((s,r)=>s+(parseFloat(r[CR_FIELDS.valor]??r.VALOR??0)),0);
+  const recLabel=recMesFiltro&&(fde||fat)?'Recebido no período':'Recebido no mês';
+  const recSub=recMesFiltro&&(fde||fat)?lstQuit.length+' título(s) quitado(s)':'títulos quitados no mês';
   const kpiEl=document.getElementById('cr-kpis');
-  if(kpiEl)kpiEl.innerHTML=`<div class="kpi" style="border-left:3px solid var(--blue)"><div class="kl">Total a receber</div><div class="kv" style="font-size:16px;color:var(--blue)">${BR(totRec)}</div><div class="ks">${lst.filter(r=>crStatus(r)!=='quitado').length} título(s) em aberto</div></div><div class="kpi" style="border-left:3px solid var(--red)"><div class="kl">Vencido</div><div class="kv" style="font-size:16px;color:var(--red)">${BR(totVenc)}</div><div class="ks">${lst.filter(r=>crStatus(r)==='vencido').length} título(s) vencido(s)</div></div><div class="kpi" style="border-left:3px solid var(--amber)"><div class="kl">A vencer este mês</div><div class="kv" style="font-size:16px;color:var(--amber)">${BR(aVencer)}</div><div class="ks">vencimento em ${new Date(hoje.getFullYear(),hoje.getMonth()+1,0).toLocaleDateString('pt-BR',{month:'long'})}</div></div><div class="kpi" style="border-left:3px solid var(--green)"><div class="kl">Recebido no mês</div><div class="kv" style="font-size:16px;color:var(--green)">${BR(recMes)}</div><div class="ks">títulos quitados no mês</div></div>`;
+  if(kpiEl)kpiEl.innerHTML=`<div class="kpi" style="border-left:3px solid var(--blue)"><div class="kl">Total a receber</div><div class="kv" style="font-size:16px;color:var(--blue)">${BR(totRec)}</div><div class="ks">${lst.filter(r=>crStatus(r)!=='quitado').length} título(s) em aberto</div></div><div class="kpi" style="border-left:3px solid var(--red)"><div class="kl">Vencido</div><div class="kv" style="font-size:16px;color:var(--red)">${BR(totVenc)}</div><div class="ks">${lst.filter(r=>crStatus(r)==='vencido').length} título(s) vencido(s)</div></div><div class="kpi" style="border-left:3px solid var(--amber)"><div class="kl">A vencer este mês</div><div class="kv" style="font-size:16px;color:var(--amber)">${BR(aVencer)}</div><div class="ks">vencimento em ${new Date(hoje.getFullYear(),hoje.getMonth()+1,0).toLocaleDateString('pt-BR',{month:'long'})}</div></div><div class="kpi" style="border-left:3px solid var(--green)"><div class="kl">${recLabel}</div><div class="kv" style="font-size:16px;color:var(--green)">${BR(recMes)}</div><div class="ks">${recSub}</div></div>`;
   /* Aging */
   const venc=data.filter(r=>crStatus(r)==='vencido');
   const a30=venc.filter(r=>crDias(crVenc(r))<=30).reduce((s,r)=>s+crVal(r),0);
