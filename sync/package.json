@@ -1,0 +1,16 @@
+{
+  "name": "sws-firestore-sync",
+  "version": "1.0.0",
+  "description": "Sincronização SQL Server SWS → Firestore (swsdb)",
+  "main": "sync-sws.js",
+  "scripts": {
+    "start": "node sync-sws.js",
+    "sync-once": "node sync-sws.js --once"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "mssql": "^10.0.0",
+    "node-cron": "^3.0.0",
+    "dotenv": "^16.0.0"
+  }
+}
