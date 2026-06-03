@@ -41,7 +41,7 @@ const COLECOES = [
     collection: 'posicao_contas_receber',
     database:   SCRWIND,
     keyField:   'CODTIT',
-    exportJson: true,   // ← este será exportado para o GitHub Pages
+    exportJson: true,   // exportado para GitHub Pages como contas-receber.json
     sql: `
       SELECT
         CODTIT,
@@ -60,6 +60,34 @@ const COLECOES = [
         END AS STATUS
       FROM ${SCRWIND}.dbo.CR_POSICAO_TITULOS   -- ← ajuste o nome da tabela/view
       WHERE SALDO > 0 OR DTVENC >= DATEADD(MONTH,-3,GETDATE())
+    `
+  },
+  {
+    // ── QUITAÇÕES / RECEBIMENTOS ──────────────────────────────────────────────
+    // Registros de pagamento efetivo. Ajuste o nome da tabela conforme o SWS:
+    //   Opções comuns: CR_RECEBIMENTOS, CR_QUITACOES, CR_LIQUIDACOES,
+    //                  CR_BAIXAS, VPR_RECEBIMENTOS
+    collection: 'quitacoes_contas_receber',
+    database:   SCRWIND,
+    keyField:   'CODRECEB',          // ajuste o campo chave
+    exportJson: true,                // exportado para GitHub Pages como quitacoes.json
+    exportFile: 'data/quitacoes.json',
+    sql: `
+      SELECT
+        CODRECEB,                    -- ← chave única do recebimento
+        CODTIT,                      -- ← código do título quitado
+        CODCLI,
+        NOMECLI,
+        NUMDOC,
+        PARCELA,
+        CONVERT(VARCHAR(10), DTQUIT,  120) AS DTQUIT,   -- data de quitação
+        CONVERT(VARCHAR(10), DTVENC,  120) AS DTVENC,   -- vencimento original
+        VALORQUIT,                   -- valor efetivamente recebido
+        VALOR,                       -- valor original do título
+        HISTORICO
+      FROM ${SCRWIND}.dbo.CR_RECEBIMENTOS   -- ← ajuste para a tabela real do SWS
+      WHERE DTQUIT >= DATEADD(YEAR,-2,GETDATE())
+      ORDER BY DTQUIT DESC
     `
   },
   {
@@ -274,21 +302,22 @@ function githubGet(path) {
   });
 }
 
-// Exporta os dados de CR para um JSON estático no GitHub Pages
-async function exportarJsonGitHub(colName, registros) {
+// Exporta dados para um JSON estático no GitHub Pages
+async function exportarJsonGitHub(col, registros) {
   if (!GH_TOKEN) {
     warn(`Export JSON desativado (GH_TOKEN ausente). Configure em .env para ativar.`);
     return;
   }
+  const filePath = col.exportFile || GH_PATH;
   try {
     const payload = JSON.stringify({
       exportedAt: new Date().toISOString(),
       count:      registros.length,
       rows:       registros
     });
-    const msg = `data: atualiza ${colName} (${registros.length} registros) [skip ci]`;
-    await githubPutFile(GH_PATH, payload, msg);
-    log(`  ✓ JSON exportado → https://${GH_OWNER}.github.io/${GH_REPO}/data/contas-receber.json`);
+    const msg = `data: atualiza ${col.collection} (${registros.length} registros) [skip ci]`;
+    await githubPutFile(filePath, payload, msg);
+    log(`  ✓ JSON exportado → https://${GH_OWNER}.github.io/${GH_REPO}/${filePath}`);
   } catch (err) {
     warn(`Falha no export JSON: ${err.message}`);
   }
@@ -312,7 +341,7 @@ async function sincronizar() {
 
         // Exporta JSON estático para GitHub Pages (apenas coleção marcada)
         if (col.exportJson) {
-          await exportarJsonGitHub(col.collection, rows);
+          await exportarJsonGitHub(col, rows);
         }
       } catch (err) {
         warn(`Erro em [${col.collection}]: ${err.message}`);

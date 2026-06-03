@@ -706,7 +706,7 @@ tr:hover td{background:var(--bg)}
 
 <script>
 
-let CR_DATA=[],CR_LAST_SYNC=null;
+let CR_DATA=[],CR_LAST_SYNC=null,QUIT_DATA=[];
 window.onCRSnapshot=function(docs){
   CR_DATA=docs;CR_LAST_SYNC=new Date();
   if(CR_DATA.length)detectCRFields(CR_DATA[0]);
@@ -744,9 +744,11 @@ function doLogout(){sessionStorage.removeItem(AK);document.getElementById('ls').
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('ls').style.display!=='none')doLogin();});
 let LS=null,LH=[],LF=[],LC=[];
 (async()=>{
+  let _hadFs=false,_fsOffline=false;
   try{
     const snap=await db.collection('dados').doc('main').get();
     if(snap.exists){
+      _hadFs=true;
       const d=snap.data();
       if(d.lotes)localStorage.setItem('ph_lotes',JSON.stringify(d.lotes));
       if(d.hist)localStorage.setItem('ph_hist',JSON.stringify(d.hist));
@@ -756,14 +758,13 @@ let LS=null,LH=[],LF=[],LC=[];
       if(d.usuarios)localStorage.setItem(UK,JSON.stringify(d.usuarios));
       if(d.corretores)localStorage.setItem(CK,JSON.stringify(d.corretores));
     }
-  }catch(e){console.warn('Firebase offline, usando cache local:',e);}
-  const _hadFs=await db.collection('dados').doc('main').get().then(s=>s.exists).catch(()=>false);
+  }catch(e){console.warn('Firebase offline, usando cache local:',e);_fsOffline=true;}
   LS=JSON.parse(localStorage.getItem('ph_lotes')||'null');
   LH=JSON.parse(localStorage.getItem('ph_hist')||'[]');
   LF=JSON.parse(localStorage.getItem('ph_fila')||'[]');
   LC=JSON.parse(localStorage.getItem('ph_ctr')||'[]');
   LCA=JSON.parse(localStorage.getItem('ph_clientes')||'[]');
-    if(localStorage.getItem('ph_v')!=='2026v2'){LS=LI.map(l=>({...l,obs:l.obs||''}));if(!_hadFs){LH=[];LF=[];LC=[];}localStorage.setItem('ph_v','2026v2');save();}else if(!LS){LS=LI.map(l=>({...l,obs:''}));save();}else if(!_hadFs){save();}
+    if(localStorage.getItem('ph_v')!=='2026v2'){LS=LI.map(l=>({...l,obs:l.obs||''}));if(!_hadFs&&!_fsOffline){LH=[];LF=[];LC=[];}localStorage.setItem('ph_v','2026v2');if(!_fsOffline)save();}else if(!LS){LS=LI.map(l=>({...l,obs:''}));if(!_fsOffline)save();}else if(!_hadFs&&!_fsOffline){save();}
   document.getElementById('fb-loading').style.display='none';
   db.collection('dados').doc('main').onSnapshot(snap=>{
     if(!snap.exists)return;
@@ -774,7 +775,7 @@ let LS=null,LH=[],LF=[],LC=[];
     if(d.fila&&JSON.stringify(d.fila)!==JSON.stringify(LF)){LF.length=0;d.fila.forEach(x=>LF.push(x));ch=true;}
     if(d.ctr&&JSON.stringify(d.ctr)!==JSON.stringify(LC)){LC.length=0;d.ctr.forEach(x=>LC.push(x));ch=true;}
     if(d.clientes&&JSON.stringify(d.clientes)!==JSON.stringify(LCA)){LCA.length=0;d.clientes.forEach(x=>LCA.push(x));ch=true;}
-    if(d.usuarios)saveUsers(d.usuarios);
+    if(d.usuarios)localStorage.setItem(UK,JSON.stringify(d.usuarios));
     if(d.corretores)localStorage.setItem(CK,JSON.stringify(d.corretores));
     if(ch&&document.getElementById('app').style.display!=='none'){const s=gS();if(s&&s.perfil!=='corretor')renderDash();}
   },{error:e=>console.warn('Snapshot:',e)});
@@ -1492,12 +1493,12 @@ function crStatus(r){const st=r[CR_FIELDS.status]||r.STATUS||'';if(st)return st.
 function renderCR(){
   populateCRCombo();
   const isMock=!CR_DATA.length;
-
   const data=getCRData();
-  const cliSel=(document.getElementById('cr-combo')||{}).value||'';
+
   const fst=(document.getElementById('cr-fst')||{}).value||'';
   const fde=(document.getElementById('cr-fde')||{}).value||'';
   const fat=(document.getElementById('cr-fat')||{}).value||'';
+  const cliSel=(document.getElementById('cr-combo')||{}).value||'';
   const hoje=new Date();hoje.setHours(0,0,0,0);
 
   // Filtro "Sem Quitação": títulos VENCIDOS do período, de clientes sem nenhuma quitação
@@ -1513,8 +1514,10 @@ function renderCR(){
       const tb2=document.getElementById('cr-tbody');if(tb2)tb2.innerHTML='';
       return;
     }
-    // Clientes que TÊM qualquer quitação no dataset completo
-    const codComQuit=new Set(data.filter(r=>crStatus(r)==='quitado').map(r=>String(r[CR_FIELDS.cod]||r.CODCLI||'')));
+    // Clientes que TÊM qualquer quitação no período: usa QUIT_DATA se disponível, senão dataset de posição
+    const codComQuit=QUIT_DATA.length
+      ?new Set(QUIT_DATA.filter(q=>{const dt=q.DTQUIT||'';return(!fde||dt>=fde)&&(!fat||dt<=fat);}).map(q=>String(q.CODCLI||'')))
+      :new Set(data.filter(r=>crStatus(r)==='quitado').map(r=>String(r[CR_FIELDS.cod]||r.CODCLI||'')));
     lst=data.filter(r=>{
       const st=crStatus(r);
       if(st!=='vencido')return false;                              // somente vencidos
@@ -1564,12 +1567,29 @@ function renderCR(){
   const aVencer=lst.filter(r=>{const vc=crVenc(r);if(!vc)return false;const v=new Date(vc+'T00:00:00');return crStatus(r)==='aberto'&&v.getMonth()===mesAtual&&v.getFullYear()===anoAtual;}).reduce((s,r)=>s+crVal(r),0);
   const lstQuit=lst.filter(r=>crStatus(r)==='quitado');
   const recMesFiltro=fst==='quitado'||fde||fat;
-  const recMes=recMesFiltro
-    ?lstQuit.reduce((s,r)=>s+(parseFloat(r[CR_FIELDS.valor]??r.VALOR??0)),0)
-    :lst.filter(r=>{const vc=crVenc(r);if(!vc)return false;const v=new Date(vc+'T00:00:00');return crStatus(r)==='quitado'&&v.getMonth()===mesAtual&&v.getFullYear()===anoAtual;}).reduce((s,r)=>s+(parseFloat(r[CR_FIELDS.valor]??r.VALOR??0)),0);
+  let recMes=0,recSub='',recAviso='';
   const recLabel=recMesFiltro&&(fde||fat)?'Recebido no período':'Recebido no mês';
-  const recSub=recMesFiltro&&(fde||fat)?lstQuit.length+' título(s) quitado(s)':'títulos quitados no mês';
-  const recAviso=fst==='quitado'&&recMes===0?` <span style="font-size:10px;color:var(--amber)" title="O dataset atual contém apenas saldos em aberto. Registros de pagamento não estão disponíveis.">⚠ sem dados de quitação</span>`:'';
+  const cliSel2=document.getElementById('cr-combo')?.value||'';
+  if(QUIT_DATA.length){
+    // usa registros de quitação reais
+    const qFilt=QUIT_DATA.filter(q=>{
+      const dt=q.DTQUIT||'';
+      if(fde&&dt<fde)return false;
+      if(fat&&dt>fat)return false;
+      if(!fde&&!fat){const qd=new Date(dt+'T00:00:00');if(qd.getMonth()!==mesAtual||qd.getFullYear()!==anoAtual)return false;}
+      if(cliSel2&&(q.NOMECLI||'').trim()!==cliSel2)return false;
+      return true;
+    });
+    recMes=qFilt.reduce((s,q)=>s+(parseFloat(q.VALORQUIT??q.VALOR??0)),0);
+    recSub=qFilt.length+' recebimento(s)';
+  }else{
+    // fallback: usa status 'quitado' no dataset de posição (apenas estimativa)
+    recMes=recMesFiltro
+      ?lstQuit.reduce((s,r)=>s+(parseFloat(r[CR_FIELDS.valor]??r.VALOR??0)),0)
+      :lst.filter(r=>{const vc=crVenc(r);if(!vc)return false;const v=new Date(vc+'T00:00:00');return crStatus(r)==='quitado'&&v.getMonth()===mesAtual&&v.getFullYear()===anoAtual;}).reduce((s,r)=>s+(parseFloat(r[CR_FIELDS.valor]??r.VALOR??0)),0);
+    recSub=recMesFiltro&&(fde||fat)?lstQuit.length+' título(s) quitado(s)':'títulos quitados no mês';
+    recAviso=recMes===0?` <span style="font-size:10px;color:var(--amber)" title="Registros de pagamento (quitacoes.json) ainda não disponíveis. Solicite ao TI que execute o sync.">⚠ sem dados de quitação</span>`:'';
+  }
   const kpiEl=document.getElementById('cr-kpis');
   if(kpiEl)kpiEl.innerHTML=`<div class="kpi" style="border-left:3px solid var(--blue)"><div class="kl">Total a receber</div><div class="kv" style="font-size:16px;color:var(--blue)">${BR(totRec)}</div><div class="ks">${lst.filter(r=>crStatus(r)!=='quitado').length} título(s) em aberto</div></div><div class="kpi" style="border-left:3px solid var(--red)"><div class="kl">Vencido</div><div class="kv" style="font-size:16px;color:var(--red)">${BR(totVenc)}</div><div class="ks">${lst.filter(r=>crStatus(r)==='vencido').length} título(s) vencido(s)</div></div><div class="kpi" style="border-left:3px solid var(--amber)"><div class="kl">A vencer este mês</div><div class="kv" style="font-size:16px;color:var(--amber)">${BR(aVencer)}</div><div class="ks">vencimento em ${new Date(hoje.getFullYear(),hoje.getMonth()+1,0).toLocaleDateString('pt-BR',{month:'long'})}</div></div><div class="kpi" style="border-left:3px solid var(--green)"><div class="kl">${recLabel}</div><div class="kv" style="font-size:16px;color:var(--green)">${BR(recMes)}${recAviso}</div><div class="ks">${recSub}</div></div>`;
   }
@@ -1597,7 +1617,7 @@ function renderCR(){
 }
 function clearCRFilters(){['cr-fde','cr-fat'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});['cr-fst','cr-combo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});renderCR();}
 function syncCR(){const el=document.getElementById('cr-sync-label');if(el)el.textContent='Atualizando…';}
-function expCR(){const data=getCRData();const h='Cliente;Código;Documento;Parcela;Emissão;Vencimento;Valor;Saldo;Status;Atraso(dias)';const r=data.map(d=>[d.NOMECLI,d.CODCLI,d.NUMDOC,d.PARCELA,d.DTEMIS,d.DTVENC,(d.VALOR||0).toFixed(2).replace('.',','),(d.SALDO??d.VALOR??0).toFixed(2).replace('.',','),crStatus(d),crDias(d.DTVENC)].join(';'));dlFile('﻿'+[h,...r].join('\n'),'contas_receber_sws.csv','text/csv;charset=utf-8');}
+function expCR(){const data=getCRData();const fn=CR_FIELDS;const h='Cliente;Código;Documento;Parcela;Emissão;Vencimento;Valor;Saldo;Status;Atraso(dias)';const r=data.map(d=>{const nm=d[fn.nome]||d.NOMECLI||'';const cd=d[fn.cod]||d.CODCLI||'';const dc=d[fn.doc]||d.NUMDOC||'';const pc=d[fn.parc]||d.PARCELA||'';const em=d[fn.emis]||d.DTEMIS||'';const vc=d[fn.venc]||d.DTVENC||'';const vl=parseFloat(d[fn.valor]??d.VALOR??0);const sl=parseFloat(d[fn.saldo]??d.SALDO??vl);return[nm,cd,dc,pc,em,vc,vl.toFixed(2).replace('.',','),sl.toFixed(2).replace('.',','),crStatus(d),crDias(vc)].join(';');});dlFile('\uFEFF'+[h,...r].join('\n'),'contas_receber_sws.csv','text/csv;charset=utf-8');}
 /* ── CADASTRO DE CLIENTES ── */
 function fmtCpf(s){s=String(s).padStart(11,'0');return s.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4');}
 function fmtFone(s){s=String(s).replace(/\D/g,'');if(s.length===11)return`(${s.slice(0,2)}) ${s.slice(2,7)}-${s.slice(7)}`;if(s.length===10)return`(${s.slice(0,2)}) ${s.slice(2,6)}-${s.slice(6)}`;return s;}
@@ -1804,7 +1824,7 @@ function newUser(){const n=prompt('Nome:');if(!n)return;const e=prompt('E-mail:'
 function editUser(id){const us=gU(),u=us.find(x=>x.id===id);if(!u)return;const n=prompt('Nome:',u.nome);if(n===null)return;const pf=prompt('Perfil (admin/gerente/usuario/corretor):',u.perfil);if(!['admin','gerente','usuario','corretor'].includes(pf)){alert('Perfil inválido. Use: admin, gerente, usuario ou corretor');return;}const p=prompt('Nova senha (vazio = manter):');u.nome=n||u.nome;u.perfil=pf;if(p&&p.length>=6)u.senha=btoa(p);saveUsers(us);renderUsers();}
 function togUser(id){const us=gU(),u=us.find(x=>x.id===id);if(!u)return;u.ativo=!u.ativo;saveUsers(us);renderUsers();}
 function expBkp(){const pl={versao:'1.2',data:new Date().toISOString(),empreendimento:'Portal do Horizonte',lotes:LS,fila:LF,contratos:LC,historico:LH,usuarios:gU(),corretores:gCorretores()};dlFile(JSON.stringify(pl,null,2),`backup_portal_${new Date().toISOString().split('T')[0]}.json`,'application/json;charset=utf-8');}
-function restBkp(inp){const f=inp.files[0];if(!f)return;if(!confirm('Substituir TODOS os dados?')){inp.value='';return;}const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(!d.versao||!d.lotes){alert('Arquivo inválido.');return;}localStorage.setItem('ph_lotes',JSON.stringify(d.lotes));localStorage.setItem('ph_fila',JSON.stringify(d.fila||[]));localStorage.setItem('ph_ctr',JSON.stringify(d.contratos||[]));localStorage.setItem('ph_hist',JSON.stringify(d.historico||[]));if(d.usuarios)saveUsers(d.usuarios);if(d.corretores)saveCorretores(d.corretores);LS.length=0;d.lotes.forEach(l=>LS.push(l));LF.length=0;(d.fila||[]).forEach(x=>LF.push(x));LC.length=0;(d.contratos||[]).forEach(x=>LC.push(x));LH.length=0;(d.historico||[]).forEach(x=>LH.push(x));save();alert(`✓ Backup restaurado! ${d.lotes.length} lotes · ${new Date(d.data).toLocaleString('pt-BR')}`);renderCfg();}catch(err){alert('Erro: '+err.message);}};r.readAsText(f);inp.value='';}
+function restBkp(inp){const f=inp.files[0];if(!f)return;if(!confirm('Substituir TODOS os dados?')){inp.value='';return;}const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(!d.versao||!d.lotes){alert('Arquivo inválido.');return;}localStorage.setItem('ph_lotes',JSON.stringify(d.lotes));localStorage.setItem('ph_fila',JSON.stringify(d.fila||[]));localStorage.setItem('ph_ctr',JSON.stringify(d.contratos||[]));localStorage.setItem('ph_hist',JSON.stringify(d.historico||[]));LS.length=0;d.lotes.forEach(l=>LS.push(l));LF.length=0;(d.fila||[]).forEach(x=>LF.push(x));LC.length=0;(d.contratos||[]).forEach(x=>LC.push(x));LH.length=0;(d.historico||[]).forEach(x=>LH.push(x));if(d.clientes){LCA.length=0;(d.clientes||[]).forEach(x=>LCA.push(x));}save();if(d.usuarios)saveUsers(d.usuarios);if(d.corretores)saveCorretores(d.corretores);alert(`✓ Backup restaurado! ${d.lotes.length} lotes · ${new Date(d.data).toLocaleString('pt-BR')}`);renderCfg();}catch(err){alert('Erro: '+err.message);}};r.readAsText(f);inp.value='';}
 
 /* ── UTILS ── */
 function dlFile(c,n,t){const b=new Blob([c],{type:t}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click();URL.revokeObjectURL(a.href);}
@@ -1963,6 +1983,36 @@ window.addEventListener('load',()=>{const s=gS();if(s){showApp(s);if(s.perfil!==
       push(all);
     }
   }catch(e){console.error('[SWS] erro:',e.message);}
+})();
+</script>
+<script>
+(async function loadQuitacoes(){
+  const QUIT_URL='https://marcospontesjuca1-svg.github.io/loteamento/data/quitacoes.json';
+  const CACHE_KEY='sws_quit_v1';
+  const CACHE_TTL=4*60*60*1000;
+  function apply(docs){
+    window.QUIT_DATA=docs;
+    console.log('[QUIT] '+docs.length+' registros de quitação carregados');
+    const el=document.getElementById('cr-sync-label');
+    if(el&&docs.length)el.textContent=(el.textContent||'').replace(/·.*$/,'')+' · '+docs.length+' quit.';
+    if(document.getElementById('pg-contasrec')?.classList.contains('active'))renderCR();
+  }
+  // 1) Cache local
+  try{
+    const c=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
+    if(c&&Date.now()-c.ts<CACHE_TTL){console.log('[QUIT] cache: '+c.docs.length+' reg');apply(c.docs);return;}
+  }catch(e){}
+  // 2) JSON estático gerado pelo sync
+  try{
+    const r=await fetch(QUIT_URL+'?t='+Date.now());
+    if(r.ok){
+      const d=await r.json();
+      if(d.rows&&d.rows.length){
+        try{const cj=JSON.stringify({ts:Date.now(),docs:d.rows});if(cj.length<4*1024*1024)localStorage.setItem(CACHE_KEY,cj);}catch(e){}
+        apply(d.rows);return;
+      }
+    }
+  }catch(e){console.log('[QUIT] quitacoes.json ainda não disponível (aguardando sync do TI)');}
 })();
 </script>
 </body>
