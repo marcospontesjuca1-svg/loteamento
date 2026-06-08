@@ -764,7 +764,22 @@ let LS=null,LH=[],LF=[],LC=[];
   LF=JSON.parse(localStorage.getItem('ph_fila')||'[]');
   LC=JSON.parse(localStorage.getItem('ph_ctr')||'[]');
   LCA=JSON.parse(localStorage.getItem('ph_clientes')||'[]');
-    if(localStorage.getItem('ph_v')!=='2026v2'){localStorage.setItem('ph_v','2026v2');if(!_hadFs&&!_fsOffline){LS=LI.map(l=>({...l,obs:l.obs||''}));LH=[];LF=[];LC=[];save();}}else if(!LS){LS=LI.map(l=>({...l,obs:''}));if(!_fsOffline)save();}else if(!_hadFs&&!_fsOffline){save();}
+  // Regra de ouro: se Firestore tem dados (_hadFs), NUNCA gravar durante init.
+  // O onSnapshot sincroniza tudo automaticamente.
+  if(_hadFs){
+    if(!LS)LS=[];  // será sobrescrito pelo onSnapshot
+    localStorage.setItem('ph_v','2026v2');
+  }else if(!_fsOffline){
+    // Primeira instalação: cria dados iniciais e salva
+    if(!LS){LS=LI.map(l=>({...l,obs:''}));}
+    LH=[];LF=[];LC=[];
+    localStorage.setItem('ph_v','2026v2');
+    save();
+  }else{
+    // Offline sem dados: usa localStorage, não escreve nada
+    if(!LS)LS=LI.map(l=>({...l,obs:''}));
+    localStorage.setItem('ph_v','2026v2');
+  }
   document.getElementById('fb-loading').style.display='none';
   db.collection('dados').doc('main').onSnapshot(snap=>{
     if(!snap.exists)return;
@@ -781,7 +796,7 @@ let LS=null,LH=[],LF=[],LC=[];
   },{error:e=>console.warn('Snapshot:',e)});
 })()
 function save(){localStorage.setItem('ph_lotes',JSON.stringify(LS));localStorage.setItem('ph_hist',JSON.stringify(LH));localStorage.setItem('ph_fila',JSON.stringify(LF));localStorage.setItem('ph_ctr',JSON.stringify(LC));localStorage.setItem('ph_clientes',JSON.stringify(LCA));fbPersist();}
-function fbPersist(){if(typeof db==='undefined')return;db.collection('dados').doc('main').set({lotes:LS,hist:LH,fila:LF,ctr:LC,clientes:LCA,usuarios:gU(),corretores:gCorretores(),ts:firebase.firestore.FieldValue.serverTimestamp()}).catch(e=>console.warn('FB save:',e));}
+function fbPersist(){if(typeof db==='undefined')return;if(!LS||!LS.length){console.warn('fbPersist bloqueado: LS vazio');return;}db.collection('dados').doc('main').set({lotes:LS,hist:LH,fila:LF,ctr:LC,clientes:LCA,usuarios:gU(),corretores:gCorretores(),ts:firebase.firestore.FieldValue.serverTimestamp()}).catch(e=>console.warn('FB save:',e));}
 const BR=v=>'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fD=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'—';
 const hoje=()=>new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
