@@ -668,6 +668,27 @@ tr:hover td{background:var(--bg)}
         <input type="number" id="sim-comis-real" min="0" max="100" step="0.01" placeholder="Ex: 3" oninput="calcSimulacao()">
       </div>
     </div>
+    <div class="fg1">
+      <div class="fi">
+        <label>Valor do Balão (R$) — opcional</label>
+        <input type="number" id="sim-balao-valor" min="0" step="100" placeholder="0,00" oninput="calcSimulacao()">
+      </div>
+    </div>
+    <div class="fg2">
+      <div class="fi">
+        <label>Data do 1º Balão</label>
+        <input type="date" id="sim-balao-data1" oninput="calcSimulacao()">
+      </div>
+      <div class="fi">
+        <label>Periodicidade do Balão</label>
+        <select id="sim-balao-periodicidade" onchange="calcSimulacao()">
+          <option value="2">Bimestral</option>
+          <option value="3">Trimestral</option>
+          <option value="6" selected>Semestral</option>
+          <option value="12">Anual</option>
+        </select>
+      </div>
+    </div>
     <div id="sim-resultado" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:13px 15px;margin-bottom:13px">
       <table class="ftbl" style="width:100%;margin-bottom:0">
         <tr><td style="color:var(--text3)">Valor do Lote</td><td id="sr-total"></td></tr>
@@ -676,10 +697,12 @@ tr:hover td{background:var(--bg)}
         <tr><td style="color:var(--text3)">Preço Líquido</td><td id="sr-liquido" style="font-weight:600"></td></tr>
         <tr><td style="color:var(--text3)">Entrada</td><td id="sr-entrada"></td></tr>
         <tr><td style="color:var(--text3)">Saldo a Financiar</td><td id="sr-saldo"></td></tr>
+        <tr id="sr-row-balao" style="display:none"><td style="color:var(--blue)">Balões (<span id="sr-balao-qtd"></span>x de <span id="sr-balao-valor"></span>)</td><td id="sr-balao-total" style="color:var(--blue)"></td></tr>
         <tr><td style="color:var(--text3)">Nº de Parcelas</td><td id="sr-nparc"></td></tr>
         <tr><td style="color:var(--text3);font-size:14px;font-weight:600">Valor da Parcela</td><td id="sr-parcela" style="color:var(--green);font-size:16px"></td></tr>
         <tr><td style="color:var(--text3)">1º Pagamento</td><td id="sr-data1"></td></tr>
         <tr><td style="color:var(--text3)">Último Pagamento</td><td id="sr-dataend"></td></tr>
+        <tr id="sr-row-balaodata" style="display:none"><td style="color:var(--text3)">1º Balão</td><td id="sr-balao-data1"></td></tr>
         <tr><td style="color:var(--text3)">Total a Pagar</td><td id="sr-totalpago"></td></tr>
         <tr id="sr-row-comisreal" style="display:none"><td style="color:var(--text3);font-style:italic">Comissão Real (inf.)</td><td id="sr-comisreal" style="color:var(--text2);font-style:italic"></td></tr>
       </table>
@@ -920,6 +943,9 @@ function abrirSimulacao(){
   document.getElementById('sim-desconto').value='';
   document.getElementById('sim-comis-contratual').value='';
   document.getElementById('sim-comis-real').value='';
+  document.getElementById('sim-balao-valor').value='';
+  document.getElementById('sim-balao-data1').value='';
+  document.getElementById('sim-balao-periodicidade').value='6';
   const hoje=new Date();hoje.setMonth(hoje.getMonth()+1);hoje.setDate(1);
   document.getElementById('sim-data1').value=hoje.toISOString().slice(0,10);
   document.getElementById('sim-resultado').style.display='none';
@@ -930,6 +956,18 @@ function abrirSimulacao(){
 }
 function closeSimulacao(){document.getElementById('modal-simulacao').classList.remove('open');SIM_LOTE=null;}
 
+function mesesEntre(d1,d2){return (d2.getFullYear()-d1.getFullYear())*12+(d2.getMonth()-d1.getMonth());}
+
+function calcBaloes(nParcelas,data1,valorBalao,balaoData1,periodMeses){
+  if(!(valorBalao>0)||!data1||!balaoData1||nParcelas<1)return{qtd:0,total:0};
+  const d1=new Date(data1+'T12:00:00');
+  const db1=new Date(balaoData1+'T12:00:00');
+  const offset=Math.max(0,mesesEntre(d1,db1));
+  if(offset>nParcelas-1)return{qtd:0,total:0};
+  const qtd=Math.floor((nParcelas-1-offset)/periodMeses)+1;
+  return{qtd,total:qtd*valorBalao};
+}
+
 function calcSimulacao(){
   if(!SIM_LOTE)return;
   const total=SIM_LOTE.preco||0;
@@ -939,6 +977,9 @@ function calcSimulacao(){
   const comisContr=parseFloat(document.getElementById('sim-comis-contratual').value)||0;
   const comisReal=parseFloat(document.getElementById('sim-comis-real').value)||0;
   const data1=document.getElementById('sim-data1').value;
+  const valorBalao=parseFloat(document.getElementById('sim-balao-valor').value)||0;
+  const balaoData1=document.getElementById('sim-balao-data1').value;
+  const periodMeses=parseInt(document.getElementById('sim-balao-periodicidade').value)||6;
   const aviso=document.getElementById('sim-aviso');
   const res=document.getElementById('sim-resultado');
   const comisValor=total*(comisContr/100);
@@ -946,10 +987,13 @@ function calcSimulacao(){
   if(precoLiq<0){aviso.textContent='Desconto + comissão excedem o valor do lote.';aviso.style.display='block';res.style.display='none';document.getElementById('btn-imprimir-sim').style.display='none';return;}
   if(entrada<0||entrada>precoLiq){aviso.textContent='A entrada não pode ser maior que o preço líquido.';aviso.style.display='block';res.style.display='none';document.getElementById('btn-imprimir-sim').style.display='none';return;}
   if(nParcelas<1){aviso.style.display='none';res.style.display='none';document.getElementById('btn-imprimir-sim').style.display='none';return;}
-  aviso.style.display='none';
   const saldo=precoLiq-entrada;
-  const valorParcela=nParcelas>0?saldo/nParcelas:0;
-  const totalPago=entrada+(valorParcela*nParcelas);
+  const{qtd:baloesQtd,total:baloesTotal}=calcBaloes(nParcelas,data1,valorBalao,balaoData1,periodMeses);
+  if(baloesTotal>saldo){aviso.textContent='O total dos balões excede o saldo a financiar.';aviso.style.display='block';res.style.display='none';document.getElementById('btn-imprimir-sim').style.display='none';return;}
+  aviso.style.display='none';
+  const saldoParcelas=saldo-baloesTotal;
+  const valorParcela=nParcelas>0?saldoParcelas/nParcelas:0;
+  const totalPago=entrada+(valorParcela*nParcelas)+baloesTotal;
   let dataFim='';
   if(data1){const d=new Date(data1+'T12:00:00');d.setMonth(d.getMonth()+(nParcelas-1));dataFim=d.toLocaleDateString('pt-BR');}
   document.getElementById('sr-total').textContent=BR(total);
@@ -962,6 +1006,15 @@ function calcSimulacao(){
   document.getElementById('sr-liquido').textContent=BR(precoLiq);
   document.getElementById('sr-entrada').textContent=BR(entrada);
   document.getElementById('sr-saldo').textContent=BR(saldo);
+  const rowBalao=document.getElementById('sr-row-balao');
+  const rowBalaoData=document.getElementById('sr-row-balaodata');
+  if(baloesQtd>0){
+    rowBalao.style.display='';rowBalaoData.style.display='';
+    document.getElementById('sr-balao-qtd').textContent=baloesQtd;
+    document.getElementById('sr-balao-valor').textContent=BR(valorBalao);
+    document.getElementById('sr-balao-total').textContent=BR(baloesTotal);
+    document.getElementById('sr-balao-data1').textContent=balaoData1?new Date(balaoData1+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+  }else{rowBalao.style.display='none';rowBalaoData.style.display='none';}
   document.getElementById('sr-nparc').textContent=nParcelas+'x';
   document.getElementById('sr-parcela').textContent=BR(valorParcela);
   document.getElementById('sr-data1').textContent=data1?new Date(data1+'T12:00:00').toLocaleDateString('pt-BR'):'—';
@@ -985,18 +1038,26 @@ function imprimirSimulacao(){
   const comisContr=parseFloat(document.getElementById('sim-comis-contratual').value)||0;
   const comisReal=parseFloat(document.getElementById('sim-comis-real').value)||0;
   const data1=document.getElementById('sim-data1').value;
+  const valorBalao=parseFloat(document.getElementById('sim-balao-valor').value)||0;
+  const balaoData1=document.getElementById('sim-balao-data1').value;
+  const periodMeses=parseInt(document.getElementById('sim-balao-periodicidade').value)||6;
+  const periodNomes={2:'Bimestral',3:'Trimestral',6:'Semestral',12:'Anual'};
   const comisValor=l.preco*(comisContr/100);
   const precoLiq=l.preco-comisValor-desconto;
   const saldo=precoLiq-entrada;
-  const valorParcela=nParcelas>0?saldo/nParcelas:0;
-  const totalPago=entrada+(valorParcela*nParcelas);
+  const{qtd:baloesQtd,total:baloesTotal}=calcBaloes(nParcelas,data1,valorBalao,balaoData1,periodMeses);
+  const saldoParcelas=saldo-baloesTotal;
+  const valorParcela=nParcelas>0?saldoParcelas/nParcelas:0;
+  const totalPago=entrada+(valorParcela*nParcelas)+baloesTotal;
   let dataFim='';
   if(data1){const d=new Date(data1+'T12:00:00');d.setMonth(d.getMonth()+(nParcelas-1));dataFim=d.toLocaleDateString('pt-BR');}
   const data1Fmt=data1?new Date(data1+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+  const balaoData1Fmt=balaoData1?new Date(balaoData1+'T12:00:00').toLocaleDateString('pt-BR'):'—';
   const hoje=new Date().toLocaleDateString('pt-BR');
   const rowComisContr=comisContr>0?`<tr><td class="la" style="color:#b05a10">Comissão Contratual (${comisContr}%)</td><td style="color:#b05a10">− ${BR(comisValor)}</td></tr>`:'';
   const rowDesc=desconto>0?`<tr><td class="la" style="color:#b05a10">Desconto</td><td style="color:#b05a10">− ${BR(desconto)}</td></tr>`:'';
   const rowComisReal=comisReal>0?`<tr><td class="la" style="color:#888;font-style:italic">Comissão Real (informativo)</td><td style="color:#888;font-style:italic">${comisReal}% = ${BR(l.preco*(comisReal/100))}</td></tr>`:'';
+  const rowBalao=baloesQtd>0?`<tr><td class="la">Balões (${periodNomes[periodMeses]||''})</td><td class="rv">${baloesQtd}x ${BR(valorBalao)} = ${BR(baloesTotal)}</td><td class="la" style="padding-left:20px">1º Balão</td><td class="rv">${balaoData1Fmt}</td></tr>`:'';
   const w=window.open('','_blank','width=820,height=900');
   w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Simulação — Q${l.q}/L${l.l}</title>
 <style>
@@ -1054,6 +1115,7 @@ td.rv{text-align:right;font-weight:600}
     <table>
       <tr><td class="la">Entrada</td><td class="rv">${BR(entrada)}</td><td class="la" style="padding-left:20px">1º Pagamento</td><td class="rv">${data1Fmt}</td></tr>
       <tr><td class="la">Saldo a Financiar</td><td class="rv">${BR(saldo)}</td><td class="la" style="padding-left:20px">Último Pagamento</td><td class="rv">${dataFim||'—'}</td></tr>
+      ${rowBalao}
       <tr><td class="la">Nº de Parcelas</td><td class="rv">${nParcelas}x</td><td class="la" style="padding-left:20px">Total a Pagar</td><td class="rv">${BR(totalPago)}</td></tr>
       ${rowComisReal}
     </table>
