@@ -1,0 +1,52 @@
+From 37471e6ff8898c58dea2d7ee2a2f0eb62f92774e Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 21 Jul 2026 21:19:16 +0000
+Subject: [PATCH] Corrige extenso incompleto e R$ duplicado no contrato
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- numExt agora retorna apenas o número por extenso (sem sufixo
+  fixo "reais"), permitindo reutilizá-lo para contagens (ex.: 180
+  parcelas) sem produzir "cento e oitenta reais" fora de contexto
+- Nova função numExtMoeda gera o extenso completo em reais,
+  incluindo os centavos (antes eram descartados por Math.round)
+- Remove o "R$ " literal duplicado antes de ${BR(...)} na cláusula
+  3.1 e no item (a), já que BR() já inclui o prefixo "R$ "
+---
+ index.html | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/index.html b/index.html
+index 950824d..9a4db4d 100644
+--- a/index.html
++++ b/index.html
+@@ -1401,13 +1401,13 @@ ${p.conjugue&&p.conjugue.nome?`<tr><th colspan="4" style="background:#f0f0f0">C
+ <p class="al">b) Que, em razão da conformação, das características e especificações próprias do(s) Lote(s), deverá analisar e providenciar, às próprias expensas, as sondagens do solo necessárias à elaboração do projeto de fundações e de escoamento de águas pluviais, tomando todas as demais medidas pertinentes, com vista a evitar prejuízos à edificação que implantará no(s) Lote(s) e aos lotes vizinhos;</p>
+ <p class="al">c) Ficará sob sua inteira responsabilidade a construção de fossa séptica, com filtro anaeróbico e sumidouro, em conformidade com as normas emanadas pela Associação Brasileira de Normas Técnicas (NBRs 7.229/93 e 13.969/97), sendo também de sua inteira responsabilidade a manutenção de referido equipamento, uma vez que o loteamento não será servido por rede coletora de esgoto.</p>
+ <p class="cl-titulo pb">CLÁUSULA TERCEIRA – DO PREÇO, PRAZO E CONDIÇÕES DE PAGAMENTO</p>
+-<p><b>3.1 PREÇO TOTAL:</b> O preço total a ser pago pelo(s) Comprador(es) é R$ ${BR(p.precoLiq||l.preco)} (${numExt(Math.round(p.precoLiq||l.preco))}).</p>
++<p><b>3.1 PREÇO TOTAL:</b> O preço total a ser pago pelo(s) Comprador(es) é ${BR(p.precoLiq||l.preco)} (${numExtMoeda(p.precoLiq||l.preco)}).</p>
+ <table class="tc">
+ <tr><th>Condição</th><th>Qtd.</th><th>Valor unitário</th><th>Vencimento</th></tr>
+ ${parseFloat(ent.replace(/[^\d,.]/g,'').replace(',','.'))||0>0?`<tr><td>Entrada</td><td>1</td><td>${ent}</td><td>Na assinatura</td></tr>`:''}
+ <tr><td>Parcelas mensais</td><td><b>${p.prazo}×</b></td><td><b>${BR(p.parc)}</b></td><td>1ª em ${fD(p.dt1)}</td></tr>
+ </table>
+-<p class="al">a) ${p.prazo} (${numExt(parseInt(p.prazo))}) parcelas mensais de R$ ${BR(p.parc)}, vencendo-se a primeira em ${fD(p.dt1)} e as demais no dia <b>${String(p.diaVencimento||new Date(p.dt1).getDate()).padStart(2,'0')}</b> dos meses subsequentes, reajustáveis anualmente com base no IGP-M da Fundação Getúlio Vargas, a partir do primeiro mês do segundo ano (13ª parcela).</p>
++<p class="al">a) ${p.prazo} (${numExt(parseInt(p.prazo))}) parcelas mensais de ${BR(p.parc)}, vencendo-se a primeira em ${fD(p.dt1)} e as demais no dia <b>${String(p.diaVencimento||new Date(p.dt1).getDate()).padStart(2,'0')}</b> dos meses subsequentes, reajustáveis anualmente com base no IGP-M da Fundação Getúlio Vargas, a partir do primeiro mês do segundo ano (13ª parcela).</p>
+ <p class="al">b) A comissão de corretagem é direito resguardado pelo Artigo 725 da Lei Art. 725 do Código Civil - Lei 10.406/02 ficado este(s) desde já ciente(s) de que em caso de eventual desfazimento do presente Contrato, os valores pagos à título de comissão de corretagem serão descontados dos valores já pagos pelo promitente comprador.</p>
+ <p class="al">c) A comissão de corretagem é de responsabilidade exclusiva de pagamento do(s) Comprador(es), ficado este(s) desde já ciente(s) de que em caso de eventual desfazimento do presente Contrato, os valores pagos à título de comissão de corretagem não serão devolvidos.</p>
+ <p><b>PARÁGRAFO PRIMEIRO.</b> O preço constante no caput dessa cláusula representa o valor real e atual do(s) imóvel(éis) comercializado(s), sendo certo que os encargos e atualização monetária incidentes sobre as prestações previstas neste instrumento e sobre o saldo devedor do preço do(s) lote(s) são pós-fixados e, em decorrência, não estão sujeitos à desindexação ou deflação a qualquer título.</p>
+@@ -1517,7 +1517,8 @@ ${parseFloat(ent.replace(/[^\d,.]/g,'').replace(',','.'))||0>0?`<tr><td>Entrada<
+ </body></html>`;
+   dlFile(html,`Contrato_${p.num}_Q${l.q}_L${l.l}.html`,'text/html;charset=utf-8');
+ }
+-function numExt(v){const n=Math.round(v);function g(x){const u=['','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove'];const d=['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa'];const c=['','cento','duzentos','trezentos','quatrocentos','quinhentos','seiscentos','setecentos','oitocentos','novecentos'];if(x===0)return'';if(x===100)return'cem';let s='';if(Math.floor(x/100)){s+=c[Math.floor(x/100)];x=x%100;if(x)s+=' e ';}if(x>=20){s+=d[Math.floor(x/10)];if(x%10)s+=' e '+u[x%10];}else if(x)s+=u[x];return s;}const mi=Math.floor(n/1000000),ml=Math.floor((n%1000000)/1000),r=n%1000;let s='';if(mi)s+=g(mi)+(mi===1?' milhão':' milhões')+(ml||r?' e ':'');if(ml)s+=g(ml)+' mil'+(r?' e ':'');if(r)s+=g(r);return(s||'zero')+' reais';}
++function numExt(v){const n=Math.round(v);function g(x){const u=['','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove'];const d=['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa'];const c=['','cento','duzentos','trezentos','quatrocentos','quinhentos','seiscentos','setecentos','oitocentos','novecentos'];if(x===0)return'';if(x===100)return'cem';let s='';if(Math.floor(x/100)){s+=c[Math.floor(x/100)];x=x%100;if(x)s+=' e ';}if(x>=20){s+=d[Math.floor(x/10)];if(x%10)s+=' e '+u[x%10];}else if(x)s+=u[x];return s;}const mi=Math.floor(n/1000000),ml=Math.floor((n%1000000)/1000),r=n%1000;let s='';if(mi)s+=g(mi)+(mi===1?' milhão':' milhões')+(ml||r?' e ':'');if(ml)s+=g(ml)+' mil'+(r?' e ':'');if(r)s+=g(r);return s||'zero';}
++function numExtMoeda(v){const n=Math.round((v||0)*100)/100;const inteiro=Math.floor(n+1e-9);const cent=Math.round((n-inteiro)*100);let s=numExt(inteiro)+' '+(inteiro===1?'real':'reais');if(cent>0)s+=' e '+numExt(cent)+' '+(cent===1?'centavo':'centavos');return s;}
+ 
+ /* ── CONTAS A RECEBER SWS ── */
+ const CR_MOCK=[
+-- 
+2.43.0
+
