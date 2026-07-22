@@ -286,7 +286,17 @@ tr:hover td{background:var(--bg)}
         <div class="card"><div class="ch"><div class="ct">Alertas</div></div><div class="cb" id="daler"></div></div>
       </div>
     </div>
-    <div class="card"><div class="ch"><div class="ct">Inadimplência — resumo</div></div><div class="cb" id="dinadump"></div></div>
+    <div class="card">
+      <div class="ch"><div class="ct">Resumo do período</div></div>
+      <div class="cb">
+        <div class="fbar" style="margin-bottom:11px">
+          <div class="fi"><label>De</label><input type="date" id="dgp-de" onchange="renderDashPeriodo()"></div>
+          <div class="fi"><label>Até</label><input type="date" id="dgp-ate" onchange="renderDashPeriodo()"></div>
+          <button class="btn bsm" style="align-self:flex-end" onclick="document.getElementById('dgp-de').value='';document.getElementById('dgp-ate').value='';renderDashPeriodo()">✕ Limpar</button>
+        </div>
+        <div class="kgrid2" id="dgp-kpis"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -883,7 +893,18 @@ function renderDash(){
   if(B.length>0)als.push({t:`${B.length} lotes bloqueados — ${BR(vb)} represados`,c:'w'});
   if(R.length>0)als.push({t:`${R.length} lotes em reserva — ${BR(vr)} em negociação`,c:'w'});
   document.getElementById('daler').innerHTML=als.map(a=>`<div class="alert a${a.c}" style="margin-bottom:5px;font-size:11px">${a.t}</div>`).join('')||'<div style="color:var(--text3);font-size:12px">Nenhum alerta ativo.</div>';
-  document.getElementById('dinadump').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px"><div><div style="font-weight:500">Marcio Silva Medeiros</div><div style="font-size:11px;color:var(--text3)">QR15 L13+L14 · +2.659 dias</div></div><div style="text-align:right"><div style="font-weight:600;color:var(--red)">R$ 10.757</div><span class="pill pr">+90d</span></div></div><div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px"><div><div style="font-weight:500">Jane Evila Rodrigues Pereira</div><div style="font-size:11px;color:var(--text3)">QR07 L07 · 3 títulos</div></div><div style="text-align:right"><div style="font-weight:600;color:var(--red)">R$ 6.818</div><span class="pill pr">+90d</span></div></div><div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;font-size:12px"><div><div style="font-weight:500">Francisco C. S. Carneiro</div><div style="font-size:11px;color:var(--text3)">QR14 L65</div></div><div style="text-align:right"><div style="font-weight:600;color:var(--red)">R$ 3.262</div><span class="pill pa">45d</span></div></div><div style="margin-top:7px"><button class="btn bsm" onclick="sp('inadimp')">Ver relatório →</button></div>`;
+  renderDashPeriodo();
+}
+function toYMD(v){if(!v)return'';v=String(v);if(v.includes('T'))return v.slice(0,10);const m=v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);if(m)return`${m[3]}-${m[2]}-${m[1]}`;return v.slice(0,10);}
+function inPeriodo(v,de,ate){const d=toYMD(v);if(!d)return false;if(de&&d<de)return false;if(ate&&d>ate)return false;return true;}
+function renderDashPeriodo(){
+  const el=document.getElementById('dgp-kpis');if(!el)return;
+  const de=V('dgp-de'),ate=V('dgp-ate'),semFiltro=!de&&!ate;
+  const nProp=(LF||[]).filter(f=>semFiltro||inPeriodo(f.ts||f.data,de,ate)).length;
+  const nCtr=(LC||[]).filter(c=>semFiltro||inPeriodo(c.aprovadoEm||c.data,de,ate)).length;
+  const nVend=(LC||[]).filter(c=>c.status!=='distratado'&&(semFiltro||inPeriodo(c.aprovadoEm||c.data,de,ate))).length;
+  const nDist=(LC||[]).filter(c=>c.status==='distratado'&&(semFiltro||inPeriodo(c.distratoEm||c.distratoData,de,ate))).length;
+  el.innerHTML=`<div class="kpi kpi-stk"><div class="kl">Propostas Realizadas</div><div class="kv">${nProp}</div></div><div class="kpi kpi-rev"><div class="kl">Contratos Gerados</div><div class="kv">${nCtr}</div></div><div class="kpi kpi-res"><div class="kl">Lotes Vendidos</div><div class="kv">${nVend}</div></div><div class="kpi" style="border-left:3px solid var(--red)"><div class="kl">Lotes Distratados</div><div class="kv">${nDist}</div></div>`;
 }
 function renderLineChart(pts){
   const el=document.getElementById('dlinechart');if(!el)return;
