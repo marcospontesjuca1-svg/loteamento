@@ -842,7 +842,15 @@ let LS=null,LH=[],LF=[],LC=[];
     if(d.clientes&&JSON.stringify(d.clientes)!==JSON.stringify(LCA)){LCA.length=0;d.clientes.forEach(x=>LCA.push(x));ch=true;}
     if(d.usuarios)localStorage.setItem(UK,JSON.stringify(d.usuarios));
     if(d.corretores)localStorage.setItem(CK,JSON.stringify(d.corretores));
-    if(ch&&document.getElementById('app').style.display!=='none'){const s=gS();if(s&&s.perfil!=='corretor')renderDash();}
+    if(ch&&document.getElementById('app').style.display!=='none'){
+      const activeEl=document.querySelector('.pg.active');
+      const activeId=activeEl?activeEl.id.slice(3):'';
+      const pageFns={dashboard:renderDash,disp:renderDisp,inadimp:renderInad,fila:renderFila,kanban:renderKanban,ctr:renderCtr,clientes:renderClientes,contasrec:renderCR,cfg:renderCfg};
+      if(pageFns[activeId])pageFns[activeId]();
+      const s=gS();
+      const p=LF.filter(f=>f.status==='aguardando'&&(!s||s.perfil!=='corretor'||f.corretor===s.nome)).length;
+      const bf=document.getElementById('bf');if(bf){bf.style.display=p>0?'inline':'none';bf.textContent=p;}
+    }
   },{error:e=>console.warn('Snapshot:',e)});
 })()
 function save(){localStorage.setItem('ph_lotes',JSON.stringify(LS));localStorage.setItem('ph_hist',JSON.stringify(LH));localStorage.setItem('ph_fila',JSON.stringify(LF));localStorage.setItem('ph_ctr',JSON.stringify(LC));localStorage.setItem('ph_clientes',JSON.stringify(LCA));fbPersist();}
